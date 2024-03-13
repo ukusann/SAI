@@ -11,7 +11,7 @@ This project uses matlab alongside with coppelia to make an industrial autonomou
 Follow these instructions to make changes in the project
 
 - Create (or go to) your specific branch
-    - Check 'git checkout' command
+    - Check 'git checkout' command test
 - Make your changes
     - Check 'git add' command
 - Push the changes in your branch
