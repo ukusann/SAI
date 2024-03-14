@@ -20,14 +20,17 @@ Follow these instructions to make changes in the project
 
 ## Useful tips
 
+- Git basics (Beginner's guide):
+https://drive.google.com/file/d/1kPeJDT1wGIiBFtNlCdEmIbcWeoyrZ7XT/view
+
 - To pull changes from another branch:
 https://www.freecodecamp.org/news/git-checkout-file-from-another-branch/
 
 - To compare files between two different branches:
 https://devconnected.com/how-to-compare-two-git-branches/
 
-- Git basics (Beginner's guide):
-https://drive.google.com/file/d/1kPeJDT1wGIiBFtNlCdEmIbcWeoyrZ7XT/view
+- Linux basic commands:
+https://kinsta.com/blog/linux-commands/
 
 
 ## License
