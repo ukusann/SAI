@@ -67,95 +67,21 @@ classdef simulator_interface < handle
             %ensure it is finished so we can access signals
             obj.vrep.simxGetPingTime(obj.clientID);
 
-            % Six different objects
-            obj.OBJECT_Number = 6;
-            obj.ObjectNames{1} = 'lata_salsichas_1';
-            obj.ObjectNames{2} = 'lata_salsichas_2';
-            obj.ObjectNames{3} = 'lata_salsichas_3';
-            obj.ObjectNames{4} = 'lata_cogumelos_1';
-            obj.ObjectNames{5} = 'lata_cogumelos_2';
-            obj.ObjectNames{6} = 'lata_cogumelos_3';
-
+            obj.TARGET_Number=2;
             
-
-            %Get Targets Handle
-            for a=1:obj.OBJECT_Number
-                object_name = ['/',obj.ObjectNames{a}];
-                [res, obj.ObjectHandle{a}] = obj.vrep.simxGetObjectHandle(obj.clientID, obj.ObjectNames{a}, obj.vrep.simx_opmode_blocking);
+            % target handle
+            
+            for t=1:obj.TARGET_Number
+                targetName{t} = ['Target',num2str(t)];
+                [res,obj.TargetHandle{t}]=obj.vrep.simxGetObjectHandle(obj.clientID,targetName{t},obj.vrep.simx_opmode_blocking);
+                
                 if (res ~= obj.vrep.simx_return_ok)
-                    disp('ERROR: Failed getting object handle');
+                    disp('ERROR: Failed getting target handle ');
                     error = 1;
                     return;
                 end
-                [res,~] = obj.vrep.simxGetObjectPosition(obj.clientID,obj.ObjectHandle{a},-1,obj.vrep.simx_opmode_streaming);
-                if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
-                    disp('ERROR: Failed getting object position information');
-                    error = 1;
-                    return;
-                end
-            end
-
-            % 48 different targets
-            obj.TARGET_Number = 48;
-            obj.TargetNames{1} = 'Prat1_frente1';
-            obj.TargetNames{2} = 'Prat1_frente2';
-            obj.TargetNames{3} = 'Prat1_frente3';
-            obj.TargetNames{4} = 'Prat1_frente4';
-            obj.TargetNames{5} = 'Prat1_frente5';
-            obj.TargetNames{6} = 'Prat1_frente6';
-            obj.TargetNames{7} = 'Prat1_frente7';
-            obj.TargetNames{8} = 'Prat1_frente8';
-            obj.TargetNames{9} = 'Prat2_frente1';
-            obj.TargetNames{10} = 'Prat2_frente2';
-            obj.TargetNames{11} = 'Prat2_frente3';
-            obj.TargetNames{12} = 'Prat2_frente4';
-            obj.TargetNames{13} = 'Prat2_frente5';
-            obj.TargetNames{14} = 'Prat2_frente6';
-            obj.TargetNames{15} = 'Prat2_frente7';
-            obj.TargetNames{16} = 'Prat2_frente8';
-            obj.TargetNames{17} = 'Prat3_frente1';
-            obj.TargetNames{18} = 'Prat3_frente2';
-            obj.TargetNames{19} = 'Prat3_frente3';
-            obj.TargetNames{20} = 'Prat3_frente4';
-            obj.TargetNames{21} = 'Prat3_frente5';
-            obj.TargetNames{22} = 'Prat3_frente6';
-            obj.TargetNames{23} = 'Prat3_frente7';
-            obj.TargetNames{24} = 'Prat3_frente8';
-            obj.TargetNames{25} = 'Prat4_frente1';
-            obj.TargetNames{26} = 'Prat4_frente2';
-            obj.TargetNames{27} = 'Prat4_frente3';
-            obj.TargetNames{28} = 'Prat4_frente4';
-            obj.TargetNames{29} = 'Prat4_frente5';
-            obj.TargetNames{30} = 'Prat4_frente6';
-            obj.TargetNames{31} = 'Prat4_frente7';
-            obj.TargetNames{32} = 'Prat4_frente8';
-            obj.TargetNames{33} = 'Prat5_frente1';
-            obj.TargetNames{34} = 'Prat5_frente2';
-            obj.TargetNames{35} = 'Prat5_frente3';
-            obj.TargetNames{36} = 'Prat5_frente4';
-            obj.TargetNames{37} = 'Prat5_frente5';
-            obj.TargetNames{38} = 'Prat5_frente6';
-            obj.TargetNames{39} = 'Prat5_frente7';
-            obj.TargetNames{40} = 'Prat5_frente8';
-            obj.TargetNames{41} = 'Prat6_frente1';
-            obj.TargetNames{42} = 'Prat6_frente2';
-            obj.TargetNames{43} = 'Prat6_frente3';
-            obj.TargetNames{44} = 'Prat6_frente4';
-            obj.TargetNames{45} = 'Prat6_frente5';
-            obj.TargetNames{46} = 'Prat6_frente6';
-            obj.TargetNames{47} = 'Prat6_frente7';
-            obj.TargetNames{48} = 'Prat6_frente8';
-
-            %Get Targets Handle
-            for a=1:obj.TARGET_Number
-                target_name = ['/',obj.TargetNames{a}];
-                [res, obj.TargetHandle{a}] = obj.vrep.simxGetObjectHandle(obj.clientID, target_name, obj.vrep.simx_opmode_blocking);
-                if (res ~= obj.vrep.simx_return_ok)
-                    disp('ERROR: Failed getting target handle');
-                    error = 1;
-                    return;
-                end
-                [res,~] = obj.vrep.simxGetObjectPosition(obj.clientID,obj.TargetHandle{a},-1,obj.vrep.simx_opmode_streaming);
+                
+                [res,~] = obj.vrep.simxGetObjectPosition(obj.clientID,obj.TargetHandle{t},-1,obj.vrep.simx_opmode_streaming);
                 if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
                     disp('ERROR: Failed getting target position information');
                     error = 1;
@@ -163,21 +89,117 @@ classdef simulator_interface < handle
                 end
             end
 
+            % % Six different objects
+            % obj.OBJECT_Number = 6;
+            % obj.ObjectNames{1} = 'lata_salsichas_1';
+            % obj.ObjectNames{2} = 'lata_salsichas_2';
+            % obj.ObjectNames{3} = 'lata_salsichas_3';
+            % obj.ObjectNames{4} = 'lata_cogumelos_1';
+            % obj.ObjectNames{5} = 'lata_cogumelos_2';
+            % obj.ObjectNames{6} = 'lata_cogumelos_3';
 
-            %Get ConveyorBelt Handle
-            [res, obj.ConveyorBeltHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, 'ConveyorBelt', obj.vrep.simx_opmode_blocking);
-            if (res ~= obj.vrep.simx_return_ok)
-                disp('ERROR: Failed getting conveyorbelt handle');
-                error = 1;
-                return;
-            end
+            
 
-            [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', 0, obj.vrep.simx_opmode_oneshot);
-            if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
-                disp('ERROR: Failed set conveyorbelt velocity!');
-                error=1;
-                return;
-            end
+            % %Get Targets Handle
+            % for a=1:obj.OBJECT_Number
+            %    object_name = ['/',obj.ObjectNames{a}];
+            %    [res, obj.ObjectHandle{a}] = obj.vrep.simxGetObjectHandle(obj.clientID, obj.ObjectNames{a}, obj.vrep.simx_opmode_blocking);
+            %    if (res ~= obj.vrep.simx_return_ok)
+            %        disp('ERROR: Failed getting object handle');
+            %        error = 1;
+            %        return;
+            %     end
+            %     [res,~] = obj.vrep.simxGetObjectPosition(obj.clientID,obj.ObjectHandle{a},-1,obj.vrep.simx_opmode_streaming);
+            %     if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
+            %        disp('ERROR: Failed getting object position information');
+            %        error = 1;
+            %        return;
+            %     end
+            % end
+
+            % % 48 different targets
+            % obj.TARGET_Number = 48;
+            % obj.TargetNames{1} = 'Prat1_frente1';
+            % obj.TargetNames{2} = 'Prat1_frente2';
+            % obj.TargetNames{3} = 'Prat1_frente3';
+            % obj.TargetNames{4} = 'Prat1_frente4';
+            % obj.TargetNames{5} = 'Prat1_frente5';
+            % obj.TargetNames{6} = 'Prat1_frente6';
+            % obj.TargetNames{7} = 'Prat1_frente7';
+            % obj.TargetNames{8} = 'Prat1_frente8';
+            % obj.TargetNames{9} = 'Prat2_frente1';
+            % obj.TargetNames{10} = 'Prat2_frente2';
+            % obj.TargetNames{11} = 'Prat2_frente3';
+            % obj.TargetNames{12} = 'Prat2_frente4';
+            % obj.TargetNames{13} = 'Prat2_frente5';
+            % obj.TargetNames{14} = 'Prat2_frente6';
+            % obj.TargetNames{15} = 'Prat2_frente7';
+            % obj.TargetNames{16} = 'Prat2_frente8';
+            % obj.TargetNames{17} = 'Prat3_frente1';
+            % obj.TargetNames{18} = 'Prat3_frente2';
+            % obj.TargetNames{19} = 'Prat3_frente3';
+            % obj.TargetNames{20} = 'Prat3_frente4';
+            % obj.TargetNames{21} = 'Prat3_frente5';
+            % obj.TargetNames{22} = 'Prat3_frente6';
+            % obj.TargetNames{23} = 'Prat3_frente7';
+            % obj.TargetNames{24} = 'Prat3_frente8';
+            % obj.TargetNames{25} = 'Prat4_frente1';
+            % obj.TargetNames{26} = 'Prat4_frente2';
+            % obj.TargetNames{27} = 'Prat4_frente3';
+            % obj.TargetNames{28} = 'Prat4_frente4';
+            % obj.TargetNames{29} = 'Prat4_frente5';
+            % obj.TargetNames{30} = 'Prat4_frente6';
+            % obj.TargetNames{31} = 'Prat4_frente7';
+            % obj.TargetNames{32} = 'Prat4_frente8';
+            % obj.TargetNames{33} = 'Prat5_frente1';
+            % obj.TargetNames{34} = 'Prat5_frente2';
+            % obj.TargetNames{35} = 'Prat5_frente3';
+            % obj.TargetNames{36} = 'Prat5_frente4';
+            % obj.TargetNames{37} = 'Prat5_frente5';
+            % obj.TargetNames{38} = 'Prat5_frente6';
+            % obj.TargetNames{39} = 'Prat5_frente7';
+            % obj.TargetNames{40} = 'Prat5_frente8';
+            % obj.TargetNames{41} = 'Prat6_frente1';
+            % obj.TargetNames{42} = 'Prat6_frente2';
+            % obj.TargetNames{43} = 'Prat6_frente3';
+            % obj.TargetNames{44} = 'Prat6_frente4';
+            % obj.TargetNames{45} = 'Prat6_frente5';
+            % obj.TargetNames{46} = 'Prat6_frente6';
+            % obj.TargetNames{47} = 'Prat6_frente7';
+            % obj.TargetNames{48} = 'Prat6_frente8';
+            % 
+            % %Get Targets Handle
+            % for a=1:obj.TARGET_Number
+            %     target_name = ['/',obj.TargetNames{a}];
+            %     [res, obj.TargetHandle{a}] = obj.vrep.simxGetObjectHandle(obj.clientID, target_name, obj.vrep.simx_opmode_blocking);
+            %     if (res ~= obj.vrep.simx_return_ok)
+            %         disp('ERROR: Failed getting target handle');
+            %         error = 1;
+            %         return;
+            %     end
+            %     [res,~] = obj.vrep.simxGetObjectPosition(obj.clientID,obj.TargetHandle{a},-1,obj.vrep.simx_opmode_streaming);
+            %     if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
+            %         disp('ERROR: Failed getting target position information');
+            %         error = 1;
+            %         return;
+            %     end
+            % end
+
+
+            % %Get ConveyorBelt Handle
+            % [res, obj.ConveyorBeltHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, 'ConveyorBelt', obj.vrep.simx_opmode_blocking);
+            % if (res ~= obj.vrep.simx_return_ok)
+            %     disp('ERROR: Failed getting conveyorbelt handle');
+            %     error = 1;
+            %     return;
+            % end
+
+            % [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', 0, obj.vrep.simx_opmode_oneshot);
+            % if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
+            %     disp('ERROR: Failed set conveyorbelt velocity!');
+            %     error=1;
+            %     return;
+            % end
 
              %% Setup data streaming
             % simulation time

@@ -39,6 +39,11 @@ if(error_sim==1)
     return;
 end
 
+[vehicle,error_kuka] = kuka_interface(sim);
+if(error_kuka==1)
+    return;
+end
+
 %Creation of a communication class object with the manipulator arm
 % Input:
 % sim - pointer to class simulator_interface
@@ -47,11 +52,11 @@ end
 % Output:
 % robot_arm - pointer to class arm_interface
 % error_sim = 1 - impossible to connect to simulator
-[robot_arm,error_man] = arm_interface(sim,robot_name,hand_name);
-if error_man == 1
-    sim.terminate();
-    return;
-end
+% [robot_arm,error_man] = arm_interface(sim,robot_name,hand_name);
+% if error_man == 1
+%     sim.terminate();
+%     return;
+% end
 
 [error,timestep] = sim.get_simulation_timestep();
 %get time step value (normally dt=50ms)
@@ -59,7 +64,7 @@ if error == 1
     sim.terminate();
     return;
 end
-[error,nJoints,Links,DistanceHand,MinPositionJoint,MaxPositionJoint] = robot_arm.get_RobotCharacteristics();
+% [error,nJoints,Links,DistanceHand,MinPositionJoint,MaxPositionJoint] = robot_arm.get_RobotCharacteristics();
 %nJoints - number of arm joints.
 %Links - dimensions of the links between the axes of rotation
 %DistanceHand - distance between the tip of the manipulator and the palm of
