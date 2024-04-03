@@ -39,6 +39,17 @@ if(error==1)
     return;
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Initialize the mobile platform with zero speeds
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+vrobot_y = 0.0;     %cm/s
+vrobot_x = 0.0;     %cm/s
+wrobot = 0.0;       %rad/s
+error = 0;
+vel_front_left = 0.0;   %rad/s
+vel_front_right = 0.0;  %rad/s
+vel_rear_left = 0.0;    %rad/s
+vel_rear_right = 0.0;   %rad/s
 
 % Convert longitudinal speed, lateral speed and angular speed into wheel
 % speed
@@ -87,48 +98,38 @@ if(error==1)
     return;
 end
 
-itarget=1; %initialize first target
+itarget=2; %initialize first target
 start = tic;
 
 %*==================================================
 %*=================Parameters=======================
-% vrobot_y = 0.0;     %cm/s
-% vrobot_x = 0.0;     %cm/s
-% wrobot = 0.0;       %rad/s
-% error = 0;
-% vel_front_left = 0.0;   %rad/s
-% vel_front_right = 0.0;  %rad/s
-% vel_rear_left = 0.0;    %rad/s
-% vel_rear_right = 0.0;   %rad/s
+vrobot_des  = 100;
+lambdaTarget = 2.3;
+lambda_v = -12.7;
+stop_time = 4;
+vinit = 50;
+min_d_limit = 2;
+max_d_limit = 300;
 
+%** Useful for Plots **
+% x = -pi:pi/10:pi;
+% x2 = 0:pi/10:2*pi;
 
-% vrobot_des  = 100;
-% lambdaTarget = 2.3;
-% lambda_v = -12.7;
-% stop_time = 4;
-% vinit = 50;
-% min_d_limit = 2;
-% max_d_limit = 300;
-
-% %** Useful for Plots **
-% % x = -pi:pi/10:pi;
-% % x2 = 0:pi/10:2*pi;
-
-% Too_Far = 10;
 % B1 = 190; % magnitude max de força de repulSão
 % B2 = 20; % taxa de decaimento com o aumento da dist
-% deltaO = 30;
-% Q = 0.005;
+B1 = 10; % magnitude max de força de repulSão
+B2 = 30; % taxa de decaimento com o aumento da dist
+Q = 0.001;
 
-% % N = 11;
+obsSensorNumber = 29;
     
-% lambda_obs  = zeros(N, 1);
-% sigma       = zeros(N, 1);
-% fobs        = zeros(N, 1);
-% psi_obs     = zeros(N, 1);
+lambda_obs  = zeros(obsSensorNumber, 1);
+sigma       = zeros(obsSensorNumber, 1);
+fobs        = zeros(obsSensorNumber, 1);
+psi_obs     = zeros(obsSensorNumber, 1);
 
-% Fobs = 0;
-% f_stock = sqrt(Q)*rand(1,N);
+Fobs = 0;
+f_stock = sqrt(Q)*rand(1,obsSensorNumber);
 
 
 %*==================================================
@@ -158,7 +159,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     % set robot linear velocity and angular displacement for steering
     % get also pose. it can be used vehicle.get_vehicle_pose() instead
-    [error,x, y, phi] = vehicle.set_velocity(vel_front_left,vel_front_right,vel_rear_left,vel_rear_right);
+    [error,xrobot, yrobot, phirobot] = vehicle.set_velocity(vel_front_left,vel_front_right,vel_rear_left,vel_rear_right);
     %Input:
     % vel_front_left - rad/s
     % vel_front_right - rad/s
@@ -224,118 +225,120 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %*===============================================
     %*===============================================
     %*----------- BEGIN YOUR CODE HERE ----------- %
-    % %-------------Navigation Direction-------------%
-    % psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
-    % ftar = -lambdaTarget*sin(phirobot - psitarget);
+    %-------------Navigation Direction-------------%
+    psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
+    ftar = -lambdaTarget*sin(phirobot - psitarget);
 
-    % %-----------------Speed Control----------------%
-    % distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
-    % vrobot_des = distance/stop_time;
-    % euler_pass = 1/(lambdaTarget*10);
-    % if  (distance >= min_d_limit) && (distance <= max_d_limit) 
-    %     vrobot = vrobot + euler_pass*(lambda_v*(vrobot-vrobot_des))
-    % elseif (distance >= min_d_limit)
-    %     vrobot = 100.0
-    % else
-    %     vrobot = 0.0
-    % end
+    %-----------------Speed Control----------------%
+    distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
+    vrobot_des = distance/stop_time;
+    euler_pass = 1/(lambdaTarget*10);
+    if  (distance >= min_d_limit) && (distance <= max_d_limit) 
+        vrobot_x = vrobot_x + euler_pass*(lambda_v*(vrobot_x-vrobot_des))
+    elseif (distance >= min_d_limit)
+        vrobot_x = 100.0
+    else
+        vrobot_x = 0.0
+    end
 
-    % %--------------Obstacle Avoidance--------------%
-    % N = length(theta_obs);  
-    % for i = 1:N
-    %     lambda_obs(i)   = B1*exp(-dc(i)/B2);
-    %     psi_obs(i)      = phirobot + theta_obs(i);
-    %     sigma(i)        = atan(tan(deltaO/2) + Rrobot/(Rrobot + dc(i) ) );
-    %     fobs(i)         = lambda_obs(i)*(phirobot - psi_obs(i))*exp(-(phirobot - psi_obs(i))*(phirobot - psi_obs(i))/(2*sigma(i)*sigma(i)));
+    %--------------Obstacle Avoidance--------------%
+    deltaThetaObs = theta_obs(2) - theta_obs(1);
+    for i = 1:obsSensorNumber
+        lambda_obs(i)   = B1*exp(-dist(i)/B2);
+        psi_obs(i)      = phirobot + theta_obs(i);
+        sigma(i)        = atan(tan(deltaThetaObs/2) + (1.2*rob_W/2)/((rob_L/2) + dist(i)));
+        fobs(i)         = lambda_obs(i)*(phirobot - psi_obs(i))*exp(-(phirobot - psi_obs(i))*(phirobot - psi_obs(i))/(2*sigma(i)*sigma(i)));
         
-    %     Fobs = Fobs +  fobs(i);
-   
-    % end
+        Fobs = Fobs +  fobs(i);
+    end
+    f_stock = sqrt(Q)*randn(1,obsSensorNumber);
+    wrobot = Fobs + f_stock + ftar;
+    Fobs = 0;
     %*===============================================
     %*===============================================
     %*------------- END OF YOUR CODE -------------
-    f_stock = sqrt(Q)*randn(1,N);
-    wrobot = Fobs + f_stock + ftar;
-    Fobs = 0;
-    %--------------------Inits-------------------- %
-    dt = timestep;
-    tau_tar = 15*dt;
-    lambda_tar = 1/tau_tar;
+%     f_stock = sqrt(Q)*randn(1,N);
+%     wrobot = Fobs + f_stock + ftar;
+%     Fobs = 0;
+%     %--------------------Inits-------------------- %
+%     dt = timestep;
+%     tau_tar = 15*dt;
+%     lambda_tar = 1/tau_tar;
      
-    delta_y = YTARGET - y;
-    delta_x = XTARGET - x;
-    psi_tar = atan2(delta_y, delta_x);
+%     delta_y = YTARGET - y;
+%     delta_x = XTARGET - x;
+%     psi_tar = atan2(delta_y, delta_x);
 
-   %--------------------ObsAv-------------------- %
-    %tau_obs = 1/10*dt;     
-    Too_far = 100;       
-    N = length(theta_obs)                   
-    beta1 = 10;                 
-    beta2 = 30;                
-    Dtheta = theta_obs(2) - theta_obs(1);      
-    Q = 0.001;
+%    %--------------------ObsAv-------------------- %
+%     %tau_obs = 1/10*dt;     
+%     Too_far = 100;       
+%     N = length(theta_obs)                   
+%     beta1 = 10;                 
+%     beta2 = 30;                
+%     Dtheta = theta_obs(2) - theta_obs(1);      
+%     Q = 0.001;
    
 
-    %--------------------Vector-------------------- %
-    psi_obs = zeros(N,1);
-    lambda_obs =zeros(N,1);
-    sigma = zeros(N,1);
-    alfa_pot = zeros(N,1);
-    f_tar=-lambda_tar*sin(phi-psi_tar);
+%     %--------------------Vector-------------------- %
+%     psi_obs = zeros(N,1);
+%     lambda_obs =zeros(N,1);
+%     sigma = zeros(N,1);
+%     alfa_pot = zeros(N,1);
+%     f_tar=-lambda_tar*sin(phi-psi_tar);
 
-    f_stoch = sqrt(Q)*randn(1,1);
+%     f_stoch = sqrt(Q)*randn(1,1);
     
-    gamma_obs = zeros(N,1);
-    k = zeros(N,1);
-    Vpot = zeros(N,1);
-    alpha = zeros(N,1);
+%     gamma_obs = zeros(N,1);
+%     k = zeros(N,1);
+%     Vpot = zeros(N,1);
+%     alpha = zeros(N,1);
 
-    fobs = zeros(N,1);
-    Fobs = 0;
-    for i=1:N
-        psi_obs(i) = phi+theta_obs(i);
-        %if dist(i) <= Too_far
-        lambda_obs(i) = beta1*exp(-dist(i)/beta2);
-        %end
-        if dist(i) > Too_far
-        lambda_obs(i) = 0;
-        end    
-        sigma(i) = atan(tan(Dtheta/2) + (1.2*rob_W/2)/((rob_L/2) + dist(i)));
-        fobs(i) = lambda_obs(i)*(phi-psi_obs(i))*exp(-(phi-psi_obs(i))^2/(2*(sigma(i)^2)));
-        if fobs(i) <= 0.2
-            k(i) = (lambda_obs(i)*sigma(i)^2)/(sqrt(exp(1)));
-            Vpot(i) = lambda_obs(i)*(sigma(i)^2)*exp((-(phi-psi_obs(i))^2)/(2*sigma(i)^2)) - k(i);
-            alpha(i) = atan(10 * Vpot(i))/pi;
-            gamma_obs(i) = -((alpha(i)-1)/2);
-            Fobs = Fobs + (gamma_obs(i)*fobs(i));
-        else
-            Fobs = Fobs + fobs(i);
-        end
-    end
+%     fobs = zeros(N,1);
+%     Fobs = 0;
+%     for i=1:N
+%         psi_obs(i) = phi+theta_obs(i);
+%         %if dist(i) <= Too_far
+%         lambda_obs(i) = beta1*exp(-dist(i)/beta2);
+%         %end
+%         if dist(i) > Too_far
+%         lambda_obs(i) = 0;
+%         end    
+%         sigma(i) = atan(tan(Dtheta/2) + (1.2*rob_W/2)/((rob_L/2) + dist(i)));
+%         fobs(i) = lambda_obs(i)*(phi-psi_obs(i))*exp(-(phi-psi_obs(i))^2/(2*(sigma(i)^2)));
+%         if fobs(i) <= 0.2
+%             k(i) = (lambda_obs(i)*sigma(i)^2)/(sqrt(exp(1)));
+%             Vpot(i) = lambda_obs(i)*(sigma(i)^2)*exp((-(phi-psi_obs(i))^2)/(2*sigma(i)^2)) - k(i);
+%             alpha(i) = atan(10 * Vpot(i))/pi;
+%             gamma_obs(i) = -((alpha(i)-1)/2);
+%             Fobs = Fobs + (gamma_obs(i)*fobs(i));
+%         else
+%             Fobs = Fobs + fobs(i);
+%         end
+%     end
     
-    %--------------------------------------------- % 
+%     %--------------------------------------------- % 
 
-    for i=1:10
-        if fobs(i) >= 0.2 && fobs(30-i) <= -0.2
+%     for i=1:10
+%         if fobs(i) >= 0.2 && fobs(30-i) <= -0.2
 
-        Fobs = Fobs - fobs(i) - fobs(30-i);
+%         Fobs = Fobs - fobs(i) - fobs(30-i);
 
-        end
-    end
+%         end
+%     end
 
-    wrobot = Fobs + f_tar +f_stoch;
-    vrobot_x = 40;
+%     wrobot = Fobs + f_tar +f_stoch;
+%     vrobot_x = 40;
    
-   %--------------------Target-------------------- %
-    d = sqrt((delta_x)^2+(delta_y)^2);
-    if(d<15)    
-        if(itarget==1)
-            itarget=2;
-        else
-            vrobot_x =0;
-        end
+%    %--------------------Target-------------------- %
+%     d = sqrt((delta_x)^2+(delta_y)^2);
+%     if(d<15)    
+%         if(itarget==1)
+%             itarget=2;
+%         else
+%             vrobot_x =0;
+%         end
 
-    end
+%     end
   
 
     %%------------- END OF YOUR CODE -------------
