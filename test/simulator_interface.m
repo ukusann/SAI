@@ -62,7 +62,9 @@ classdef simulator_interface < handle
             %ensure it is finished so we can access signals
             obj.vrep.simxGetPingTime(obj.clientID);
             
-            obj.TARGET_Number=2;
+            
+            %TODO: Change here to support more targets
+            obj.TARGET_Number=3;
             
             % target handle
             
