@@ -98,7 +98,7 @@ if(error==1)
     return;
 end
 
-itarget=2; %initialize first target
+itarget=1; %initialize first target
 start = tic;
 
 %*==================================================
@@ -130,7 +130,7 @@ psi_obs     = zeros(obsSensorNumber, 1);
 
 Fobs = 0;
 f_stock = sqrt(Q)*rand(1,obsSensorNumber);
-
+changeTargetDist = 50;
 
 %*==================================================
 %%%---------------------- Start Robot Motion Behavior -------------------
@@ -234,11 +234,11 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     vrobot_des = distance/stop_time;
     euler_pass = 1/(lambdaTarget*10);
     if  (distance >= min_d_limit) && (distance <= max_d_limit) 
-        vrobot_x = vrobot_x + euler_pass*(lambda_v*(vrobot_x-vrobot_des))
+        vrobot_x = vrobot_x + euler_pass*(lambda_v*(vrobot_x-vrobot_des));
     elseif (distance >= min_d_limit)
-        vrobot_x = 100.0
+        vrobot_x = 100.0;
     else
-        vrobot_x = 0.0
+        vrobot_x = 0.0;
     end
 
     %--------------Obstacle Avoidance--------------%
@@ -254,6 +254,21 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     f_stock = sqrt(Q)*randn(1,obsSensorNumber);
     wrobot = Fobs + f_stock + ftar;
     Fobs = 0;
+
+    %---------------Target Transition--------------%
+    delta_y = YTARGET - yrobot;
+    delta_x = XTARGET - xrobot;
+    d = sqrt((delta_x)^2+(delta_y)^2)
+    if(d<changeTargetDist)    
+        if(itarget==1)
+            itarget=2;
+        elseif(itarget==2)
+            itarget=3;
+        else
+            vrobot_x =0;
+        end
+
+    end
     %*===============================================
     %*===============================================
     %*------------- END OF YOUR CODE -------------
