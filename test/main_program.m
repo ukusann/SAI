@@ -39,17 +39,6 @@ if(error==1)
     return;
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%Initialize the mobile platform with zero speeds
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-vrobot_y = 0.0;     %cm/s
-vrobot_x = 0.0;     %cm/s
-wrobot = 0.0;       %rad/s
-error = 0;
-vel_front_left = 0.0;   %rad/s
-vel_front_right = 0.0;  %rad/s
-vel_rear_left = 0.0;    %rad/s
-vel_rear_right = 0.0;   %rad/s
 
 % Convert longitudinal speed, lateral speed and angular speed into wheel
 % speed
@@ -101,6 +90,48 @@ end
 itarget=1; %initialize first target
 start = tic;
 
+%*==================================================
+%*=================Parameters=======================
+% vrobot_y = 0.0;     %cm/s
+% vrobot_x = 0.0;     %cm/s
+% wrobot = 0.0;       %rad/s
+% error = 0;
+% vel_front_left = 0.0;   %rad/s
+% vel_front_right = 0.0;  %rad/s
+% vel_rear_left = 0.0;    %rad/s
+% vel_rear_right = 0.0;   %rad/s
+
+
+% vrobot_des  = 100;
+% lambdaTarget = 2.3;
+% lambda_v = -12.7;
+% stop_time = 4;
+% vinit = 50;
+% min_d_limit = 2;
+% max_d_limit = 300;
+
+% %** Useful for Plots **
+% % x = -pi:pi/10:pi;
+% % x2 = 0:pi/10:2*pi;
+
+% Too_Far = 10;
+% B1 = 190; % magnitude max de força de repulSão
+% B2 = 20; % taxa de decaimento com o aumento da dist
+% deltaO = 30;
+% Q = 0.005;
+
+% % N = 11;
+    
+% lambda_obs  = zeros(N, 1);
+% sigma       = zeros(N, 1);
+% fobs        = zeros(N, 1);
+% psi_obs     = zeros(N, 1);
+
+% Fobs = 0;
+% f_stock = sqrt(Q)*rand(1,N);
+
+
+%*==================================================
 %%%---------------------- Start Robot Motion Behavior -------------------
 while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Number)
     %% Robot interface
@@ -190,8 +221,42 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     % the simulation timestep is stored in timestep (value is not changed
     % while simulation is running)
     % the simulation time is stored in sim_time.
+    %*===============================================
+    %*===============================================
+    %*----------- BEGIN YOUR CODE HERE ----------- %
+    % %-------------Navigation Direction-------------%
+    % psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
+    % ftar = -lambdaTarget*sin(phirobot - psitarget);
 
-    %%----------- BEGIN YOUR CODE HERE ----------- %
+    % %-----------------Speed Control----------------%
+    % distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
+    % vrobot_des = distance/stop_time;
+    % euler_pass = 1/(lambdaTarget*10);
+    % if  (distance >= min_d_limit) && (distance <= max_d_limit) 
+    %     vrobot = vrobot + euler_pass*(lambda_v*(vrobot-vrobot_des))
+    % elseif (distance >= min_d_limit)
+    %     vrobot = 100.0
+    % else
+    %     vrobot = 0.0
+    % end
+
+    % %--------------Obstacle Avoidance--------------%
+    % N = length(theta_obs);  
+    % for i = 1:N
+    %     lambda_obs(i)   = B1*exp(-dc(i)/B2);
+    %     psi_obs(i)      = phirobot + theta_obs(i);
+    %     sigma(i)        = atan(tan(deltaO/2) + Rrobot/(Rrobot + dc(i) ) );
+    %     fobs(i)         = lambda_obs(i)*(phirobot - psi_obs(i))*exp(-(phirobot - psi_obs(i))*(phirobot - psi_obs(i))/(2*sigma(i)*sigma(i)));
+        
+    %     Fobs = Fobs +  fobs(i);
+   
+    % end
+    %*===============================================
+    %*===============================================
+    %*------------- END OF YOUR CODE -------------
+    f_stock = sqrt(Q)*randn(1,N);
+    wrobot = Fobs + f_stock + ftar;
+    Fobs = 0;
     %--------------------Inits-------------------- %
     dt = timestep;
     tau_tar = 15*dt;
@@ -204,7 +269,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
    %--------------------ObsAv-------------------- %
     %tau_obs = 1/10*dt;     
     Too_far = 100;       
-    N = length(theta_obs);                   
+    N = length(theta_obs)                   
     beta1 = 10;                 
     beta2 = 30;                
     Dtheta = theta_obs(2) - theta_obs(1);      
