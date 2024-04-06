@@ -1,37 +1,14 @@
-%   main_program.m
-%   Main program for the control of manipulators
-%   Author: Luís Louro, llouro@dei.uminho.pt
-%           Estela Bicho, estela.bicho@dei.uminho.pt
-%   % Copyright (C) 2024
-%   2024/02/19
-%--------------------------------------------------------------------------
+%% IMPORTANT:
 % Before running this script, open the scenario in CoppeliaSim, e.g
 % Do not run simulation!
-%--------------------------------------------------------------------------
-clear
-% need to choose the arm to control
-robot_name = 'UR10';
-%robot_name = 'Kuka_LBRiisy';
-%robot_name = 'LBR_iiwa_14_R820';
-
-% need to choose the gripper/hand
-hand_name = 'RG2';
-
-%Number of targets for each colour of box
-salsageCan  = [1, 2, 3];
-mushroomCan = [4, 5, 6];
-
-%Number of positions in the shelves
-frontShelf1 = [ 1,  2,  3,  4,  5,  6,  7,  8];
-frontShelf2 = [ 9, 10, 11, 12, 13, 14, 15, 16];
-frontShelf3 = [17, 18, 19, 20, 21, 22, 23, 24];
-frontShelf4 = [25, 26, 27, 28, 29, 30, 31, 32];
-frontShelf5 = [33, 34, 35, 36, 37, 38, 39, 40];
-frontShelf6 = [41, 42, 43, 44, 45, 46, 47, 48];
-
+%   Author: Luís Louro, llouro@dei.uminho.pt
+%           Estela Bicho, estela.bicho@dei.uminho.pt
+%   % Copyright (C) 2023
+%   2023/10/31
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Creation of a communication class object with the simulator
 % Try to connect to simulator
-% Output:
+%Output:
 % sim - pointer to class simulator_interface
 % error_sim = 1 - impossible to connect to simulator
 [sim,error_sim] = simulator_interface();
@@ -39,6 +16,20 @@ if(error_sim==1)
     return;
 end
 
+% Creation of a communication class object with the robot
+%Input:
+% sim - pointer to class kuka_interface
+%Output:
+% vehicle - pointer to class kuka_interface
+[vehicle,error_kuka] = kuka_interface(sim);
+if(error_kuka==1)
+    return;
+end
+
+% need to choose the arm to control
+robot_name = 'LBR_iiwa_14_R820';
+% need to choose the gripper/hand
+hand_name = '2FGP20';
 %Creation of a communication class object with the manipulator arm
 % Input:
 % sim - pointer to class simulator_interface
@@ -52,13 +43,21 @@ if error_man == 1
     sim.terminate();
     return;
 end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-[error,timestep] = sim.get_simulation_timestep();
-%get time step value (normally dt=50ms)
-if error == 1
-    sim.terminate();
+%This function returns relevant information about the mobile platform
+[error,rob_W,rob_L,theta_obs] = vehicle.get_RobotCharacteristics();
+%Output:
+% error = 1 - error in function
+% rob_W - robot width (cm)
+% rob_L - robot lenght (cm)
+% theta_obs - Vector with angle value for each sector of obstacle dynamic
+% i (i = 1, . . . , 29) relative to the frontal direction (in rad)
+if(error==1)
     return;
 end
+
+%This function returns relevant information about the robotic arm
 [error,nJoints,Links,DistanceHand,MinPositionJoint,MaxPositionJoint] = robot_arm.get_RobotCharacteristics();
 %nJoints - number of arm joints.
 %Links - dimensions of the links between the axes of rotation
@@ -71,113 +70,271 @@ if error == 1
     return;
 end
 
-%--------------------------------------------------------------------------
-error = sim.move_conveyorbelt(); %Put the conveyor belt in motion
-if error == 1
-    sim.terminate();
-    return;
-end
-
 error = robot_arm.open_hand(); %Initialize with hand opened
 if error == 1
     sim.terminate();
     return;
 end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%Initialize the mobile platform with zero speeds
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+vrobot_y = 0.0;     %cm/s
+vrobot_x = 0.0;     %cm/s
+wrobot = 0.0;       %rad/s
+error = 0;
+vel_front_left = 0.0;   %rad/s
+vel_front_right = 0.0;  %rad/s
+vel_rear_left = 0.0;    %rad/s
+vel_rear_right = 0.0;   %rad/s
 
+% Convert longitudinal speed, lateral speed and angular speed into wheel
+% speed
+[error,vel_front_left,vel_front_right,vel_rear_left,vel_rear_right] = vehicle.Kinematics_vehicle(wrobot, vrobot_y,vrobot_x);
+%Input:
+% wrobot - angular speed
+% vrobot_x - longitudinal speed (cm/s)
+% vrobot_y - lateral speed (cm/s)
+%Output:
+% error = 1 - error in function
+% vel_front_left - front left wheel rotation speed (rad/s)
+% vel_front_right - front right wheel rotation speed (rad/s)
+% vel_rear_left - rear left wheel rotation speed (rad/s)
+% vel_rear_right - rear right wheel rotation speed (rad/s)
+if(error==1)
+    return;
+end
+
+% Set wheels speeds
+[error, ~, ~, phi] = vehicle.set_velocity(vel_front_left,vel_front_right,vel_rear_left,vel_rear_right);
+%Input:
+% vel_front_left - rad/s
+% vel_front_right - rad/s
+% vel_rear_left - rad/s
+% vel_rear_right - rad/s
+%Output:
+% robot  (xrobot,yrobot) in cm
+% phirobot - rad
+% error = 1 - error in function
+if(error==1)
+    return;
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Show robot bounding box in simulator
+error = vehicle.show_robot_bounding_box(true);
+if(error==1)
+    return;
+end
+
+% Get time step value (normally dt=50ms)
+[error,timestep] = sim.get_simulation_timestep();
+%Output:
+% timestep - information of time step (dt)
+% error = 1 - error in function
+if(error==1)
+    return;
+end
+
+itarget=1; %initialize first target
 start = tic;
-m=1;
-stop=0;
-while stop==0
-    %----------------------------------------------------------------------
+
+%*==================================================
+%*=================Parameters=======================
+vrobot_des  = 100;
+lambdaTarget = 2.3;
+lambda_v = -12.7;
+stop_time = 4;
+vinit = 50;
+min_d_limit = 2;
+max_d_limit = 300;
+
+%** Useful for Plots **
+% x = -pi:pi/10:pi;
+% x2 = 0:pi/10:2*pi;
+
+% B1 = 190; % magnitude max de força de repulSão
+% B2 = 20; % taxa de decaimento com o aumento da dist
+
+% B1 = 20; % magnitude max de força de repulSão
+%B2 = 30; % taxa de decaimento com o aumento da dist
+B1 = 50;
+B2 = 30;
+Q = 0.005;
+
+obsSensorNumber = 29;
+    
+lambda_obs  = zeros(obsSensorNumber, 1);
+sigma       = zeros(obsSensorNumber, 1);
+fobs        = zeros(obsSensorNumber, 1);
+psi_obs     = zeros(obsSensorNumber, 1);
+
+Fobs = 0;
+f_stock = sqrt(Q)*rand(1,obsSensorNumber);
+changeTargetDist = 50;
+
+%*==================================================
+%%%---------------------- Start Robot Motion Behavior -------------------
+while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Number)
     %% Robot interface
-    % set and get information to/from vrep
+    % set and get information to/from CoppeliaSim
     % avoid do processing in between ensure_all_data and trigger_simulation
     sim.ensure_all_data();
-
-    % ReadArmJoints - get joint value (rad) for arm
-    [error,ReadArmJoints] = robot_arm.get_joints()
-    if error == 1
-        sim.terminate();
+    % Convert longitudinal speed, lateral speed and angular speed into wheel
+    % speed
+    [error,vel_front_left,vel_front_right,vel_rear_left,vel_rear_right] = vehicle.Kinematics_vehicle(wrobot, vrobot_y,vrobot_x);
+    %Input:
+    % wrobot - angular speed
+    % vrobot_x - longitudinal speed (cm/s)
+    % vrobot_y - lateral speed (cm/s)
+    %Output:
+    % error = 1 - error in function
+    % vel_front_left - front left wheel rotation speed (rad/s)
+    % vel_front_right - front right wheel rotation speed (rad/s)
+    % vel_rear_left - rear left wheel rotation speed (rad/s)
+    % vel_rear_right - rear right wheel rotation speed (rad/s)
+    if(error==1)
         return;
     end
 
-    % armPosition - get robot position
-    [error,armPosition] = robot_arm.get_robot_position();
-    if error == 1
-        sim.terminate();
+    % set robot linear velocity and angular displacement for steering
+    % get also pose. it can be used vehicle.get_vehicle_pose() instead
+    [error,xrobot, yrobot, phirobot] = vehicle.set_velocity(vel_front_left,vel_front_right,vel_rear_left,vel_rear_right);
+    %Input:
+    % vel_front_left - rad/s
+    % vel_front_right - rad/s
+    % vel_rear_left - rad/s
+    % vel_rear_right - rad/s
+    %Output:
+    % robot  (xrobot,yrobot) in cm
+    % phirobot - rad
+    % error = 1 - error in function
+    if(error==1)
         return;
     end
 
-    % objectPosition - get object position
-    [error,objectPosition]=sim.get_object_position(LATA_SALSICHAS_1)
-    %[error,objectPosition]=sim.get_object_position(LATA_SALSICHAS_2);
-    %[error,objectPosition]=sim.get_object_position(LATA_SALSICHAS_3);
-    %[error,objectPosition]=sim.get_object_position(LATA_COGUMELOS_1);
-    %[error,objectPosition]=sim.get_object_position(LATA_COGUMELOS_2);
-    %[error,objectPosition]=sim.get_object_position(LATA_COGUMELOS_3);
-    if error == 1
-        sim.terminate();
+    %[x, y, phi_2pi] = vehicle.get_vehicle_pose2pi();
+
+    % trigger obstacles data reception
+    error = vehicle.trigger_obstacles();
+    % error = 1 - error in function
+    if(error==1)
         return;
     end
 
-    % objectPosition - get target position
-    [error,targetPosition]=sim.get_target_position(PRATELEIRA1_FRENTE1)
-    %[error,targetPosition]=sim.get_target_position(PRATELEIRA1_FRENTE2);
-    %[error,targetPosition]=sim.get_target_position(PRATELEIRA1_FRENTE3);
-    %[error,targetPosition]=sim.get_target_position(PRATELEIRA1_FRENTE4);
-    %[error,targetPosition]=sim.get_target_position(PRATELEIRA1_FRENTE5);
-    % etc
-    if error == 1
-        sim.terminate();
+    %Get target position for target 1 or 2 (itarget)
+    [error,XTARGET,YTARGET] = sim.get_TargetPosition(itarget);
+    %Input:
+    %itarget - selection of target to get location
+    %Output:
+    %XTARGET - location information on the x-axis of the target (cm)
+    %YTARGET - location information on the y-axis of the target (cm)
+    % error = 1 - error in function
+    if(error==1)
         return;
     end
 
-    %get simulation time
+    %Get simulation time
     [error,sim_time] = sim.get_simulation_time();
-    if error == 1
-        sim.terminate();
+    %Output:
+    % sim_time - information of simulation time
+    % error = 1 - error in function
+    if(error==1)
         return;
-    end 
+    end
 
     %trigger simulation step
     sim.trigger_simulation();
-    %----------------------------------------------------------------------
-    % --- YOUR CODE --- %
 
-    %Direct Kinematics calculation
-    %Inverse Kinematics - Send values for joints
-    %Write joints.
-    %armJoints(1)=0*pi/180;
-    %armJoints(2)=90*pi/180;
-    %armJoints(3)=0*pi/180;
-    %armJoints(4)=0*pi/180;
-    %armJoints(5)=0*pi/180;
-    %armJoints(6)=0*pi/180;
-    %armJoints(7)=0*pi/180;
-    %error = robot_arm.set_joints(armJoints) %send value for arm Joints in rad
-    %if error == 1
-    %    sim.terminate();
-    %    return;
-    %end
+    %% Processing step
+    % Obtain the distances of the sectors of interest in obstacle avoidance
+    %dynamics.
+    [error,dist] = vehicle.get_DistanceSensorAquisition(true, false);
+    % Output:
+    % dist - array of distances for each sector of obstacle avoidance
+    %dynamics (cm)
+    % error = 1 - error in function
+    if(error==1)
+        return;
+    end
 
-    %Functions that allows open/close the hand
-    %error = robot_arm.open_hand();     %open
-    %error = robot_arm.close_hand();    %close
-    %if error == 1
-    %    sim.terminate();
-    %    return;
-    %end
+    % compute new vehicle velocity...
+    % the simulation timestep is stored in timestep (value is not changed
+    % while simulation is running)
+    % the simulation time is stored in sim_time.
+    %*===============================================
+    %*===============================================
+    %*----------- BEGIN YOUR CODE HERE ----------- %
 
-    %Function that allows you to put the conveyor belt in motion/stop
-    %error = sim.move_conveyorbelt();     %motion
-    %error = sim.stop_conveyorbelt();     %stop
-    %if error == 1
-    %    sim.terminate();
-    %    return;
-    %end
+    %***********************************************
+    %*----------------Robotic Arm------------------%
+    %***********************************************
+    armJoints(1)=0*pi/180;
+    armJoints(2)=90*pi/180;
+    armJoints(3)=0*pi/180;
+    armJoints(4)=0*pi/180;
+    armJoints(5)=90*pi/180;
+    armJoints(6)=0*pi/180;
+    armJoints(7)=90*pi/180;
+    error = robot_arm.set_joints(armJoints) %send value for arm Joints in rad
+    if error == 1
+       sim.terminate();
+       return;
+    end
 
-    m=m+1;
-    %----------------------------------------------------------------------
+    %***********************************************
+    %*----------------Mobile Robot------------------%
+    %***********************************************
+    % %-------------Navigation Direction-------------%
+    % psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
+    % ftar = -lambdaTarget*sin(phirobot - psitarget);
+
+    % %-----------------Speed Control----------------%
+    % distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
+    % vrobot_des = distance/stop_time;
+    % euler_pass = 1/(lambdaTarget*10);
+    % if  (distance >= min_d_limit) && (distance <= max_d_limit) 
+    %     vrobot_x = vrobot_x + euler_pass*(lambda_v*(vrobot_x-vrobot_des));
+    % elseif (distance >= min_d_limit)
+    %     vrobot_x = 100.0;
+    % else
+    %     vrobot_x = 0.0;
+    % end
+
+    % %--------------Obstacle Avoidance--------------%
+    % deltaThetaObs = theta_obs(2) - theta_obs(1);
+    % %sebenta pag 11
+    % for i = 1:obsSensorNumber
+    %     lambda_obs(i)   = B1*exp(-dist(i)/B2);
+    %     psi_obs(i)      = phirobot + theta_obs(i);
+    %     sigma(i)        = atan(tan(deltaThetaObs/2) + (rob_L/2)/((rob_W/2) + dist(i)));
+    %     fobs(i)         = lambda_obs(i)*(phirobot - psi_obs(i))*exp(-(phirobot - psi_obs(i))*(phirobot - psi_obs(i))/(2*sigma(i)*sigma(i)));
+    %     Fobs = Fobs + fobs(i);
+    % end
+    % f_stock = sqrt(Q)*randn(1,obsSensorNumber);
+    % wrobot = Fobs + f_stock + ftar;
+    % Fobs = 0;
+
+    % %---------------Target Transition--------------%
+    % delta_y = YTARGET - yrobot;
+    % delta_x = XTARGET - xrobot;
+    % d = sqrt((delta_x)^2+(delta_y)^2);
+    % if(d<changeTargetDist)    
+    %     if(itarget==1)
+    %         itarget=2;
+    %         sim.move_conveyorbelt();
+  
+    %     elseif(itarget==2)
+    %         sim.stop_conveyorbelt();
+    %         itarget=3;
+    %     else
+    %         vrobot_x =0;
+    %     end
+
+    % end
+    %*===============================================
+    %*===============================================
+    %*------------- END OF YOUR CODE -------------
+
+    %%----------------------------------------------------------------------
     %It allows to guarantee a minimum cycle time of 50ms for the
     %computation cycle in Matlab
     time = toc(start);
@@ -189,4 +346,5 @@ while stop==0
     start = tic;
     %----------------------------------------------------------------------
 end
-error = sim.terminate();
+sim.terminate();
+
