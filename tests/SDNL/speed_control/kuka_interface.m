@@ -4,8 +4,8 @@ classdef kuka_interface < handle
     %   pre-processing for a MATLAB based control interface with a
     %   developed robot in CoppeliaSim.
     %   2023/10/20
-    %   % Copyright (C) 2023, by Luís Louro
-    %   Author: Luís Louro  e-mail: luislouro@algoritmi.uminho.pt
+    %   % Copyright (C) 2023, by Luï¿½s Louro
+    %   Author: Luï¿½s Louro  e-mail: luislouro@algoritmi.uminho.pt
     
     properties (Access = private)
         vrep
@@ -501,11 +501,10 @@ classdef kuka_interface < handle
                 erro = 1;
                 error(msg);
             end
-            
             if erro==0
                 % Get pose
                 [erro, x, y, phi] = get_vehicle_pose(obj);
-                %conversão para cm já realizada
+                %conversï¿½o para cm jï¿½ realizada
             end
             
         end
@@ -856,7 +855,7 @@ classdef kuka_interface < handle
                 
                 for k=1:size(Index)
                     j = Index(k);
-                    if(pos(1,i)-pos(1,i-1)==0) %recta vertical do obstáculo x1-x0=0
+                    if(pos(1,i)-pos(1,i-1)==0) %recta vertical do obstï¿½culo x1-x0=0
                         m_sensor_i= (obj.y_sensor_final(j)-0)/(obj.x_sensor_final(j)-0);
                         b_recta_i = pos(1,i);
 
@@ -901,7 +900,7 @@ classdef kuka_interface < handle
                 
                 for k=1:size(Index)
                    j= Index(k);
-                   if(pos(1,i)-pos(1,i-1)==0) %recta vertical do obstáculo x1-x0=0
+                   if(pos(1,i)-pos(1,i-1)==0) %recta vertical do obstï¿½culo x1-x0=0
                         m_sensor_i= (obj.y_sensor_final(j)-0)/(obj.x_sensor_final(j)-0);
                         b_recta_i = pos(1,i);
 
