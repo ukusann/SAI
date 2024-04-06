@@ -88,7 +88,7 @@ classdef simulator_interface < handle
             end
             
             %Get ConveyorBelt Handle
-            [res, obj.ConveyorOutHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, 'conveyor_out', obj.vrep.simx_opmode_blocking);
+            [res, obj.ConveyorOutHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, '/conveyor_out', obj.vrep.simx_opmode_blocking);
             if (res ~= obj.vrep.simx_return_ok)
                 disp('ERROR: Failed getting conveyor out handle');
                 error = 1;
