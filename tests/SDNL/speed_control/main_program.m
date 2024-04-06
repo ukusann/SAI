@@ -142,7 +142,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     % set and get information to/from CoppeliaSim
     % avoid do processing in between ensure_all_data and trigger_simulation
     sim.ensure_all_data();
-
+    sim.move_conveyorbelt();
     % Convert longitudinal speed, lateral speed and angular speed into wheel
     % speed
     [error,vel_front_left,vel_front_right,vel_rear_left,vel_rear_right] = vehicle.Kinematics_vehicle(wrobot, vrobot_y,vrobot_x);
