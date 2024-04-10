@@ -192,85 +192,179 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     % the simulation time is stored in sim_time.
 
     %%----------- BEGIN YOUR CODE HERE ----------- %
-    %--------------------Inits-------------------- %
     dt = timestep;
-    tau_tar = 15*dt;
+    tau_tar = 25 * dt;
     lambda_tar = 1/tau_tar;
-     
-    delta_y = YTARGET - y;
-    delta_x = XTARGET - x;
-    psi_tar = atan2(delta_y, delta_x);
-
-   %--------------------ObsAv-------------------- %
-    %tau_obs = 1/10*dt;     
-    Too_far = 100;       
-    N = length(theta_obs);                   
-    beta1 = 10;                 
-    beta2 = 30;                
-    Dtheta = theta_obs(2) - theta_obs(1);      
+    tau_obs_min = 5*dt;
+    beta_1 = 1/tau_obs_min;
+    beta_2 = 27;
     Q = 0.001;
+    Q_sqrt = sqrt(Q);
+    N = length(theta_obs); % NUMERO DE SENSORES
+    TOO_FAR = 50;
+    Dtheta = theta_obs(2) - theta_obs(1); % Valores obtidos na função getcharacteristics
+
+    psi_obs = zeros(N, 1);
+    lambda_obs = zeros(N, 1);
+    sigma = zeros(N, 1);
+    f_obs_i = zeros(N, 1);
    
+    f_stoch = Q_sqrt * randn(1,1);
 
-    %--------------------Vector-------------------- %
-    psi_obs = zeros(N,1);
-    lambda_obs =zeros(N,1);
-    sigma = zeros(N,1);
-    alfa_pot = zeros(N,1);
-    f_tar=-lambda_tar*sin(phi-psi_tar);
-
-    f_stoch = sqrt(Q)*randn(1,1);
+    psi_tar = atan2(YTARGET - y,XTARGET-x); % utilizar atan2 devido ha existência de dois valores para cada par de dados
     
-    gamma_obs = zeros(N,1);
-    k = zeros(N,1);
-    Vpot = zeros(N,1);
-    alpha = zeros(N,1);
+    ftar = -lambda_tar*sin(phi - psi_tar); 
+    
+    f_obs=0;
 
-    fobs = zeros(N,1);
-    Fobs = 0;
-    for i=1:N
-        psi_obs(i) = phi+theta_obs(i);
-        %if dist(i) <= Too_far
-        lambda_obs(i) = beta1*exp(-dist(i)/beta2);
-        %end
-        if dist(i) > Too_far
+    U_robot = 0;
+    
+      
+   for i=1:29
+
+    psi_obs(i) = phi + theta_obs(i);
+    lambda_obs(i) = beta_1*exp(-dist(i)/beta_2);
+    sigma(i) = atan(tan(Dtheta/2) + (1.2*rob_W/2)/((rob_L/2) + dist(i)));  %6*
+
+    if(dist(i)>=TOO_FAR)
+
         lambda_obs(i) = 0;
-        end    
-        sigma(i) = atan(tan(Dtheta/2) + (1.2*rob_W/2)/((rob_L/2) + dist(i)));
-        fobs(i) = lambda_obs(i)*(phi-psi_obs(i))*exp(-(phi-psi_obs(i))^2/(2*(sigma(i)^2)));
-        if fobs(i) <= 0.2
-            k(i) = (lambda_obs(i)*sigma(i)^2)/(sqrt(exp(1)));
-            Vpot(i) = lambda_obs(i)*(sigma(i)^2)*exp((-(phi-psi_obs(i))^2)/(2*sigma(i)^2)) - k(i);
-            alpha(i) = atan(10 * Vpot(i))/pi;
-            gamma_obs(i) = -((alpha(i)-1)/2);
-            Fobs = Fobs + (gamma_obs(i)*fobs(i));
-        else
-            Fobs = Fobs + fobs(i);
-        end
-    end
-    
-    %--------------------------------------------- % 
-
-    for i=1:10
-        if fobs(i) >= 0.2 && fobs(30-i) <= -0.2
-
-        Fobs = Fobs - fobs(i) - fobs(30-i);
-
-        end
-    end
-
-    wrobot = Fobs + f_tar +f_stoch;
-    vrobot_x = 40;
-   
-   %--------------------Target-------------------- %
-    d = sqrt((delta_x)^2+(delta_y)^2);
-    if(d<15)    
-        if(itarget==1)
-            itarget=2;
-        else
-            vrobot_x =0;
-        end
 
     end
+
+    f_obs_i(i) = lambda_obs(i) * (phi - psi_obs(i)) * exp((-(phi - psi_obs(i))^2) / (2 * sigma(i)^2));
+    f_obs = f_obs + f_obs_i(i); 
+
+    if(i>=14 && i<=16) %só considerar os sensores da frente
+        k = (lambda_obs(i)*(sigma(i))^2)/sqrt(exp(1));
+        U_pot= lambda_obs(i)*(sigma(i)^2)*exp(-(phi - psi_obs(i))^2)/(2*(sigma(i))^2) - k;
+        U_robot = U_pot + U_robot;
+    end
+
+
+   end
+
+    wrobot= f_obs + ftar + f_stoch;
+
+    dist_tar = sqrt((XTARGET-x)^2+(YTARGET - y)^2);
+
+    dist_tar_final = pi/2 - phi;
+
+    if(U_robot > 0) %está perto do obstáculo
+        % vrobot_x = 0;
+        % vrobot_y = 60;
+        sensor_esq = dist(24) + dist(25) + dist(26)
+        sensor_dir = dist(4) + dist(5) + dist(6)
+        if( sensor_esq < sensor_dir) %sinal que está mais perto um obstaculo no lado esquerdo, pois soma das dist menor, logo andar em y para o sentido oposto
+            vrobot_x = 0;
+            vrobot_y = -60;
+        else %sinal que está mais perto um obstaculo no lado direito, logo andar em y para o sentido oposto
+            % e coloca por predefenição  o igual para o lado direto
+            vrobot_x = 0;
+            vrobot_y = 60;
+        end
+           
+     
+    else
+
+        if(dist_tar < 3)
+
+            vrobot_x = 0;
+            vrobot_y = 0;
+            wrobot = dist_tar_final;
+            itarget = 2;
+        else 
+
+            % vrobot_x = 65*(1-exp(-dist_tar/25));
+            vrobot_x = 40*(1-exp(-dist_tar/25));
+            vrobot_y = 0; %desligar a velocidade de y sinal que já passou o obstaculo
+
+        end 
+
+    end
+  
+
+
+   %----------------------view_dynamics--------------------
+
+    %    view_dynamics = 0;
+    % 
+    % if (view_dynamics)
+    % 
+    %     % Definição de phi_plot e outros parâmetros
+    %     phi_plot = (0: 5 :360) * pi/180;
+    %     phi_plot_deg = (0: 5 :360);
+    % 
+    %     % Cria uma nova figura
+    %     figure(1)
+    % 
+    %     % Plot dos gráficos das observações
+    %     subplot(2, 2, 1);
+    %     hold on;
+    %     cla;
+    % 
+    % 
+    %     ftar_plot = -lambda_tar*sin(phi_plot- psi_tar); %lphi = lenght(phi_plot);
+    % 
+    %     plot(phi_plot_deg, ftar_plot, 'LineWidth',2);
+    %     xlim([0 360])
+    %     ylabel('dφ/dt')
+    %     xline(rad2deg(phi+ 2*pi*(phi < 0)), 'LineWidth',2)
+    %     grid on;
+    %     title('ftar');
+    % 
+    % 
+    %     % Plot dos gráficos das observações
+    %     subplot(2, 2, 2);
+    %     hold on;
+    %     cla;
+    %     Fobs_plot = 0; % Inicialização do vetor de soma
+    %     U_robot_plot = 0;
+    %     xline(rad2deg(phi+ 2*pi*(phi < 0)), 'LineWidth',2)
+    % 
+    %     for i=1:N
+    % 
+    %         fobs_plot = (lambda_obs(i)*(phi_plot - psi_obs(i)).*exp(-(phi_plot - psi_obs(i)).^2)/(2*sigma(i)^2));
+    %         k_plot = (lambda_obs(i)*(sigma(i))^2)/sqrt(exp(1));
+    %         U_pot_plot= lambda_obs(i)*((sigma(i))^2).*exp(-(phi_plot - psi_obs(i)).^2)/(2*(sigma(i))^2) - k_plot;
+    %         U_robot_plot = U_pot_plot + U_robot_plot;
+    % 
+    %         % Plot dos gráficos dentro do loop
+    %         grid on;
+    %         title('Individual fobs');
+    %         plot(phi_plot_deg, fobs_plot, 'LineWidth',2);
+    %         xlim([0 360])
+    %         ylabel('dφ/dt')
+    % 
+    %         Fobs_plot = Fobs_plot + fobs_plot; 
+    % 
+    %     end
+    % 
+    %     % Plot do gráfico somado dos obstáculos
+    %     subplot(2, 2, 3);
+    %     cla;
+    %     plot(phi_plot_deg, Fobs_plot, 'LineWidth',2);
+    %     hold on;
+    %     plot(phi_plot_deg, U_robot_plot, 'LineWidth',2);
+    %     xlim([0 360])
+    %     ylabel('dφ/dt')
+    %     xline(rad2deg(phi+ 2*pi*(phi < 0)), 'LineWidth',2)
+    %     grid on;
+    %     title('Fobs and Up,obs');
+    % 
+    %     Ftotal_plot = ftar_plot + Fobs_plot;
+    % 
+    %     % Plot do gráfico total
+    %     subplot(2, 2, 4);
+    %     cla;
+    %     plot(phi_plot_deg, Ftotal_plot, 'LineWidth',2);
+    %     xlim([0 360])
+    %     ylabel('dφ/dt')
+    %     xline(rad2deg(phi+ 2*pi*(phi < 0)), 'LineWidth',2)
+    %     grid on;
+    %     title('Ftotal');
+    % 
+    % end 
   
 
     %%------------- END OF YOUR CODE -------------
