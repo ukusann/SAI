@@ -177,7 +177,7 @@ achieve_target_2 = 0;
 move_arm = 0;
 go_to_target = 1;
 close_gripper = 0;
-
+delay = 0;
 %*==================================================
 
 %*---------------------- Initial Commands -------------------
@@ -298,12 +298,16 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     end
 
     if(close_gripper == 1)
-        error = robot_arm.close_hand();
-        if error == 1
-            sim.terminate();
-            return;
-         end
-        close_gripper = 0;
+        delay = delay + toc(start)
+        if(delay > 3)
+            error = robot_arm.close_hand();
+            if error == 1
+                sim.terminate();
+                return;
+            end
+            delay = 0;
+            close_gripper = 0;
+        end
     end
     %***********************************************
     %*----------------Mobile Robot------------------%
