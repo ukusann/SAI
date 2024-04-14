@@ -47,7 +47,7 @@ classdef visao < handle
             [res, resolution, image1] = obj.vrep.simxGetVisionSensorImage2(obj.clientID, camhandle, 0, obj.vrep.simx_opmode_oneshot);
 
             image=uint8(image1);
-            % imshow(image);
+            imshow(image);
 
         %     %------------------------------------Visão-----------------------------------
         %     obj.red_bowl = 100*[0.415;1.775;0.3094];

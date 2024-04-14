@@ -43,7 +43,7 @@ if error_man == 1
     sim.terminate();
     return;
 end
-[visao, error_visao] = visao();
+[visao_rob, error_visao] = visao(sim);
 if(error_visao==1)
     return;
 end
