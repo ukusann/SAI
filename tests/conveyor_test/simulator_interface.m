@@ -93,6 +93,8 @@ classdef simulator_interface < handle
                 disp('ERROR: Failed getting conveyor out handle');
                 error = 1;
                 return;
+            else 
+                disp('Connect to conveyor out handle');
             end
 
             [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', 0, obj.vrep.simx_opmode_oneshot);

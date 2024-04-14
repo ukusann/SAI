@@ -110,6 +110,8 @@ stop_time = 4;
 vinit = 50;
 min_d_limit = 2;
 max_d_limit = 300;
+aux_flag = 1;
+delay = 0;
 
 %** Useful for Plots **
 % x = -pi:pi/10:pi;
@@ -134,6 +136,8 @@ psi_obs     = zeros(obsSensorNumber, 1);
 Fobs = 0;
 f_stock = sqrt(Q)*rand(1,obsSensorNumber);
 changeTargetDist = 50;
+sim.move_conveyorbelt();
+disp('Move Conveyor out');
 
 %*==================================================
 %%%---------------------- Start Robot Motion Behavior -------------------
@@ -227,54 +231,68 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %*===============================================
     %*===============================================
     %*----------- BEGIN YOUR CODE HERE ----------- %
-
-    %-------------Navigation Direction-------------%
-    psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
-    ftar = -lambdaTarget*sin(phirobot - psitarget);
-
-    %-----------------Speed Control----------------%
-    distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
-    vrobot_des = distance/stop_time;
-    euler_pass = 1/(lambdaTarget*10);
-    if  (distance >= min_d_limit) && (distance <= max_d_limit) 
-        vrobot_x = vrobot_x + euler_pass*(lambda_v*(vrobot_x-vrobot_des));
-    elseif (distance >= min_d_limit)
-        vrobot_x = 100.0;
-    else
-        vrobot_x = 0.0;
-    end
+    % 
+    % %-------------Navigation Direction-------------%
+    % psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
+    % ftar = -lambdaTarget*sin(phirobot - psitarget);
+    % 
+    % %-----------------Speed Control----------------%
+    % distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
+    % vrobot_des = distance/stop_time;
+    % euler_pass = 1/(lambdaTarget*10);
+    % if  (distance >= min_d_limit) && (distance <= max_d_limit) 
+    %     vrobot_x = vrobot_x + euler_pass*(lambda_v*(vrobot_x-vrobot_des));
+    % elseif (distance >= min_d_limit)
+    %     vrobot_x = 100.0;
+    % else
+    %     vrobot_x = 0.0;
+    % end
 
     %--------------Obstacle Avoidance--------------%
-    deltaThetaObs = theta_obs(2) - theta_obs(1);
-    %sebenta pag 11
-    for i = 1:obsSensorNumber
-        lambda_obs(i)   = B1*exp(-dist(i)/B2);
-        psi_obs(i)      = phirobot + theta_obs(i);
-        sigma(i)        = atan(tan(deltaThetaObs/2) + (rob_L/2)/((rob_W/2) + dist(i)));
-        fobs(i)         = lambda_obs(i)*(phirobot - psi_obs(i))*exp(-(phirobot - psi_obs(i))*(phirobot - psi_obs(i))/(2*sigma(i)*sigma(i)));
-        Fobs = Fobs + fobs(i);
-    end
-    f_stock = sqrt(Q)*randn(1,obsSensorNumber);
-    wrobot = Fobs + f_stock + ftar;
-    Fobs = 0;
+    % deltaThetaObs = theta_obs(2) - theta_obs(1);
+    % %sebenta pag 11
+    % for i = 1:obsSensorNumber
+    %     lambda_obs(i)   = B1*exp(-dist(i)/B2);
+    %     psi_obs(i)      = phirobot + theta_obs(i);
+    %     sigma(i)        = atan(tan(deltaThetaObs/2) + (rob_L/2)/((rob_W/2) + dist(i)));
+    %     fobs(i)         = lambda_obs(i)*(phirobot - psi_obs(i))*exp(-(phirobot - psi_obs(i))*(phirobot - psi_obs(i))/(2*sigma(i)*sigma(i)));
+    %     Fobs = Fobs + fobs(i);
+    % end
+    % f_stock = sqrt(Q)*randn(1,obsSensorNumber);
+    % wrobot = Fobs + f_stock + ftar;
+    % Fobs = 0;
 
-    %---------------Target Transition--------------%
-    delta_y = YTARGET - yrobot;
-    delta_x = XTARGET - xrobot;
-    d = sqrt((delta_x)^2+(delta_y)^2);
-    if(d<changeTargetDist)    
-        if(itarget==1)
-            itarget=2;
-            sim.move_conveyorbelt();
-  
-        elseif(itarget==2)
-            sim.stop_conveyorbelt();
-            itarget=3;
-        else
-            vrobot_x =0;
+    % %---------------Target Transition--------------%
+    % delta_y = YTARGET - yrobot;
+    % delta_x = XTARGET - xrobot;
+    % d = sqrt((delta_x)^2+(delta_y)^2);
+    % if(d<changeTargetDist)    
+    %     if(itarget==1)
+    %         itarget=2;
+    %         sim.move_conveyorbelt();
+    % 
+    %     elseif(itarget==2)
+    %         sim.stop_conveyorbelt();
+    %         itarget=3;
+    %     else
+    %         vrobot_x =0;
+    %     end
+
+    %end
+    if(aux_flag == 1)
+    
+    delay = delay + toc(start);
+    if(delay > 5)
+        sim.stop_conveyorbelt();
+        disp('Stop COnveyor OUt');
+        if error == 1
+            sim.terminate();
+            return;
         end
-
+        delay = 0;
+        aux_flag = 0;
     end
+end
     %*===============================================
     %*===============================================
     %*------------- END OF YOUR CODE -------------
