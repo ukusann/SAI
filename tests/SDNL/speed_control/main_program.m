@@ -105,10 +105,10 @@ start = tic;
 %*=================Parameters=======================
 vrobot_des  = 100;
 lambdaTarget = 2.3;
-lambda_v = -12.7;
+lambda_v = 12.7;
 stop_time = 4;
 vinit = 50;
-min_d_limit = 2;
+min_d_limit = 150;
 max_d_limit = 300;
 
 %** Useful for Plots **
@@ -133,7 +133,7 @@ psi_obs     = zeros(obsSensorNumber, 1);
 
 Fobs = 0;
 f_stock = sqrt(Q)*rand(1,obsSensorNumber);
-changeTargetDist = 50;
+changeTargetDist = 20;
 
 %*==================================================
 %%%---------------------- Start Robot Motion Behavior -------------------
@@ -233,16 +233,27 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     ftar = -lambdaTarget*sin(phirobot - psitarget);
 
     %-----------------Speed Control----------------%
-    distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
-    vrobot_des = distance/stop_time;
-    euler_pass = 1/(lambdaTarget*10);
-    if  (distance >= min_d_limit) && (distance <= max_d_limit) 
-        vrobot_x = vrobot_x + euler_pass*(lambda_v*(vrobot_x-vrobot_des));
-    elseif (distance >= min_d_limit)
-        vrobot_x = 100.0;
+    distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2); 
+    if(distance >= max_d_limit)
+        vrobot_des = 100.0;
+    elseif((distance >= min_d_limit) && (distance <= max_d_limit))
+        vrobot_des = distance/stop_time;
+    elseif(distance <= min_d_limit)
+        vrobot_des = 30.0;
     else
-        vrobot_x = 0.0;
+        vrobot_des = 0.0;
     end
+    euler_pass = 1/(lambdaTarget*10);
+    acc = -lambda_v*(vrobot_x - vrobot_des);
+    vrobot_x = vrobot_x + acc*euler_pass; 
+    % vrobot_des = distance/stop_time;
+    % if  (distance >= min_d_limit) && (distance <= max_d_limit) 
+    %     vrobot_x = vrobot_x + euler_pass*(lambda_v*(vrobot_x-vrobot_des));
+    % elseif (distance >= min_d_limit)
+    %     vrobot_x = 100.0;
+    % else
+    %     vrobot_x = 0.0;
+    % end
 
     %--------------Obstacle Avoidance--------------%
     deltaThetaObs = theta_obs(2) - theta_obs(1);
@@ -265,10 +276,8 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     if(d<changeTargetDist)    
         if(itarget==1)
             itarget=2;
-            sim.move_conveyorbelt();
   
         elseif(itarget==2)
-            sim.stop_conveyorbelt();
             itarget=3;
         else
             vrobot_x =0;
