@@ -188,9 +188,8 @@ classdef arm_interface < handle
             elseif strcmp(obj.hand_name,'BarrettHand')==1
                 DistanceHand = 0.0755+0.018;
                 %Palma da mão 0.0755
-            %! Alterar valores!!
             elseif strcmp(obj.hand_name,'2FGP20')==1
-                DistanceHand = 0.0755+0.018;
+                DistanceHand = 0.342+0.018;
                 %Palma da mão 0.0755
             else
                 disp('ERROR: No hand defined');
