@@ -5,7 +5,7 @@ class StateMachine:
         self.state = 'state1'
 
     def state1_function(self):
-        print("Executing State 1 Function")
+        print("Executing State 1 Mobile Function")
 
     def state2_function(self):
         print("Executing State 2 Function")
