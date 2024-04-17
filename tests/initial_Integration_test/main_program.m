@@ -275,10 +275,11 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %*===============================================
     %*===============================================
     %*----------- BEGIN YOUR CODE HERE ----------- %
-
+    %% Begin Code
     %***********************************************
     %*----------------Robotic Arm------------------%
     %***********************************************
+    %% Robotic Arm
     if(move_arm == 1)
         armJoints(1)=90*pi/180;
         armJoints(2)=0*pi/180;
@@ -288,7 +289,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         armJoints(6)=0*pi/180;
         armJoints(7)=0*pi/180;
     
-        error = robot_arm.set_joints(armJoints) %send value for arm Joints in rad
+        error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
         if error == 1
            sim.terminate();
            return;
@@ -298,7 +299,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     end
 
     if(close_gripper == 1)
-        delay = delay + toc(start)
+        delay = delay + toc(start);
         if(delay > 3)
             error = robot_arm.close_hand();
             if error == 1
@@ -312,6 +313,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %***********************************************
     %*----------------Mobile Robot------------------%
     %***********************************************
+    %% Mobile Robot
     % %-------------Navigation Direction-------------%
     if(go_to_target == 1)
     
@@ -368,6 +370,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %*===============================================
     %*===============================================
     %*------------- END OF YOUR CODE -------------
+    %% End of Code
 
     %%----------------------------------------------------------------------
     %It allows to guarantee a minimum cycle time of 50ms for the
