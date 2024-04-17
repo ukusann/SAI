@@ -284,7 +284,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     delay = delay + toc(start);
     if(delay > 5)
         sim.stop_conveyorbelt();
-        disp('Stop COnveyor OUt');
+        disp('Stop Conveyor OUt');
         if error == 1
             sim.terminate();
             return;
