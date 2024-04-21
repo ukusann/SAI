@@ -25,6 +25,24 @@ end
 if(error_kuka==1)
     return;
 end
+
+% need to choose the arm to control
+robot_name = 'LBR_iiwa_14_R820';
+% need to choose the gripper/hand
+hand_name = '2FGP20';
+%Creation of a communication class object with the manipulator arm
+% Input:
+% sim - pointer to class simulator_interface
+% robot_name - name of arm CoppeliaSim model
+% hand_name - name of hand CoppeliaSim model
+% Output:
+% robot_arm - pointer to class arm_interface
+% error_sim = 1 - impossible to connect to simulator
+[robot_arm,error_man] = arm_interface(sim,robot_name,hand_name);
+if error_man == 1
+    sim.terminate();
+    return;
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 %This function returns relevant information about the mobile platform
@@ -39,6 +57,24 @@ if(error==1)
     return;
 end
 
+%This function returns relevant information about the robotic arm
+[error,nJoints,Links,DistanceHand,MinPositionJoint,MaxPositionJoint] = robot_arm.get_RobotCharacteristics();
+%nJoints - number of arm joints.
+%Links - dimensions of the links between the axes of rotation
+%DistanceHand - distance between the tip of the manipulator and the palm of
+% the hand
+%MinPositionJoint - array with minimum position for joint 1-6
+%MaxPositionJoint - array with maximum position for joint 1-6
+if error == 1
+    sim.terminate();
+    return;
+end
+
+error = robot_arm.open_hand(); %Initialize with hand opened
+if error == 1
+    sim.terminate();
+    return;
+end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %Initialize the mobile platform with zero speeds
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -105,7 +141,7 @@ start = tic;
 %*=================Parameters=======================
 vrobot_des  = 100;
 lambdaTarget = 2.3;
-lambda_v = 12.7;
+lambda_v = 5;
 stop_time = 4;
 vinit = 50;
 min_d_limit = 150;
@@ -115,12 +151,7 @@ max_d_limit = 300;
 % x = -pi:pi/10:pi;
 % x2 = 0:pi/10:2*pi;
 
-% B1 = 190; % magnitude max de força de repulSão
-% B2 = 20; % taxa de decaimento com o aumento da dist
-
-% B1 = 20; % magnitude max de força de repulSão
-%B2 = 30; % taxa de decaimento com o aumento da dist
-B1 = 50;
+B1 = 20;
 B2 = 30;
 Q = 0.005;
 
@@ -133,8 +164,17 @@ psi_obs     = zeros(obsSensorNumber, 1);
 
 Fobs = 0;
 f_stock = sqrt(Q)*rand(1,obsSensorNumber);
-changeTargetDist = 20;
+changeTargetDist = 40;
+euler_pass = 1/(lambdaTarget*10);
+init_parking = 0;
+exit_parking = 0;
+phi_parking = [pi/2, pi, 0];
+delay = 0;
+%*==================================================
 
+%*---------------------- Initial Commands -------------------
+sim.move_conveyorbelt();
+robot_arm.set_joints_defPos();
 %*==================================================
 %%%---------------------- Start Robot Motion Behavior -------------------
 while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Number)
@@ -232,28 +272,6 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
     ftar = -lambdaTarget*sin(phirobot - psitarget);
 
-    %-----------------Speed Control----------------%
-    distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2); 
-    if(distance >= max_d_limit)
-        vrobot_des = 100.0;
-    elseif((distance >= min_d_limit) && (distance <= max_d_limit))
-        vrobot_des = distance/stop_time;
-    elseif(distance <= min_d_limit)
-        vrobot_des = 30.0;
-    else
-        vrobot_des = 0.0;
-    end
-    euler_pass = 1/(lambdaTarget*10);
-    acc = -lambda_v*(vrobot_x - vrobot_des);
-    vrobot_x = vrobot_x + acc*euler_pass; 
-    % vrobot_des = distance/stop_time;
-    % if  (distance >= min_d_limit) && (distance <= max_d_limit) 
-    %     vrobot_x = vrobot_x + euler_pass*(lambda_v*(vrobot_x-vrobot_des));
-    % elseif (distance >= min_d_limit)
-    %     vrobot_x = 100.0;
-    % else
-    %     vrobot_x = 0.0;
-    % end
 
     %--------------Obstacle Avoidance--------------%
     deltaThetaObs = theta_obs(2) - theta_obs(1);
@@ -269,19 +287,75 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     wrobot = Fobs + f_stock + ftar;
     Fobs = 0;
 
+    %-----------------Speed Control----------------%
+    distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
+    if(exit_parking == 0)
+        if(distance >= max_d_limit)
+            vrobot_des = 100.0;
+        elseif((distance >= min_d_limit) && (distance <= max_d_limit))
+            vrobot_des = distance/stop_time;
+        elseif(distance <= min_d_limit)
+            vrobot_des = 30.0;
+            init_parking = 1;
+        else
+            vrobot_des = 0.0;
+        end
+        if(init_parking == 0)
+            vrobot_y = 0.0;
+            acc = -lambda_v*(vrobot_x - vrobot_des);
+            vrobot_x = vrobot_x + acc*euler_pass;
+        end
+    end
+
+    
+    %----------------Parking System----------------%
+    if(init_parking == 1)
+        vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
+        vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
+    
+        ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
+        wrobot = ftar;
+    end
+    if(exit_parking == 1)
+        delay = delay + toc(start);
+        if(delay > 3)
+            delay = 0;
+            vrobot_y = 0.0;
+            exit_parking = 0;
+            if(itarget==1)
+                itarget=2;
+      
+            elseif(itarget==2)
+                itarget=3;
+            else
+                vrobot_x =0;
+                vrobot_y = 0;
+            end
+        else
+            vrobot_x = vrobot_des * -cos(psitarget - phi_parking(itarget));
+            vrobot_y = vrobot_des * -sin(psitarget - phi_parking(itarget));
+            ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
+            wrobot = ftar;
+        end
+    end
+   
     %---------------Target Transition--------------%
     delta_y = YTARGET - yrobot;
     delta_x = XTARGET - xrobot;
     d = sqrt((delta_x)^2+(delta_y)^2);
-    if(d<changeTargetDist)    
-        if(itarget==1)
-            itarget=2;
-  
-        elseif(itarget==2)
-            itarget=3;
-        else
-            vrobot_x =0;
-        end
+    if(d<changeTargetDist) 
+        init_parking = 0;
+        exit_parking = 1;
+        % if(exit_parking == 0)
+        %     if(itarget==1)
+        %         itarget=2;
+      
+        %     elseif(itarget==2)
+        %         itarget=3;
+        %     else
+        %         vrobot_x =0;
+        %     end
+        % end   
 
     end
     %*===============================================
