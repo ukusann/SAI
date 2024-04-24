@@ -134,7 +134,7 @@ if(error==1)
     return;
 end
 
-itarget=2; %initialize first target
+itarget=1; %initialize first target
 start = tic;
 
 %*==================================================
@@ -184,6 +184,8 @@ delay_grip = 0;
 %***********************
 
 %***** System Flags *****
+currentState = states.GoToTarget;
+nextState = currentState;
 move_arm = 0;
 go_to_target = 1;
 close_gripper = 0;
@@ -440,6 +442,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
     end
 
+    currentState = nextState;
     %*===============================================
     %*===============================================
     %*------------- END OF YOUR CODE -------------
