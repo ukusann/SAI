@@ -447,11 +447,11 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
             %     sim.terminate();
             %     return;
             % end
-            armJoints(1)=0*pi/180;
+            armJoints(1)=90*pi/180;
             armJoints(2)=0*pi/180;
-            armJoints(3)=0*pi/180;
-            armJoints(4)=0*pi/180;
-            armJoints(5)=0*pi/180;
+            armJoints(3)=-90*pi/180;
+            armJoints(4)=-90*pi/180;
+            armJoints(5)=90*pi/180;
             armJoints(6)=0*pi/180;
             armJoints(7)=0*pi/180;
             
@@ -501,7 +501,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                 end
                 armMoved = 1;
             elseif(placed == 1) % Move to default position
-                error = robot_arm.set_joints_defPos(); %send value for arm Joints in rad
+                error = robot_arm.set_joints_defPos() %send value for arm Joints in rad
                 if error == 1
                     sim.terminate();
                     return;
