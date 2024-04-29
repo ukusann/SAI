@@ -179,6 +179,7 @@ delay_exitPark = 0;
 %***** Robotic Arm *****
 close_gripper = 0;
 open_gripper = 0;
+isGripperClosed = 0;
 delay_grip = 0;
 armMoved = 0;
 delay_movArm = 0;
@@ -397,14 +398,17 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         
         else
             delay_grip = delay_grip + toc(start);
-            if(delay_grip > 3)
+            if(delay_grip > 3 && isGripperClosed == 0)
                 error = robot_arm.close_hand();
                 if error == 1
                     sim.terminate();
                     return;
                 end
-                delay_grip = 0;
+                isGripperClosed = 1;
+                
+            elseif(delay_grip > 6)
                 close_gripper = 0;
+                delay_grip = 0;
                 picked = 1; %todo: Change State Aux Flag
             end
         end
@@ -419,28 +423,35 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         % wrobot = 0.0;
         if(open_gripper == 0)
 
-            if(itarget == 2)
-                armJoints(1)=0*pi/180;
-                armJoints(2)=0*pi/180;
-                armJoints(3)=0*pi/180;
-                armJoints(4)=0*pi/180;
-                armJoints(5)=0*pi/180;
-                armJoints(6)=0*pi/180;
-                armJoints(7)=0*pi/180;
+            % if(itarget == 2)
+            %     armJoints(1)=0*pi/180;
+            %     armJoints(2)=0*pi/180;
+            %     armJoints(3)=0*pi/180;
+            %     armJoints(4)=0*pi/180;
+            %     armJoints(5)=0*pi/180;
+            %     armJoints(6)=0*pi/180;
+            %     armJoints(7)=0*pi/180;
                 
-            elseif(itarget == 3)
-                armJoints(1)=0*pi/180;
-                armJoints(2)=0*pi/180;
-                armJoints(3)=0*pi/180;
-                armJoints(4)=0*pi/180;
-                armJoints(5)=0*pi/180;
-                armJoints(6)=0*pi/180;
-                armJoints(7)=0*pi/180;
-            else
-                disp('Error in target to move robotic arm!');
-                sim.terminate();
-                return;
-            end
+            % elseif(itarget == 3)
+            %     armJoints(1)=0*pi/180;
+            %     armJoints(2)=0*pi/180;
+            %     armJoints(3)=0*pi/180;
+            %     armJoints(4)=0*pi/180;
+            %     armJoints(5)=0*pi/180;
+            %     armJoints(6)=0*pi/180;
+            %     armJoints(7)=0*pi/180;
+            % else
+            %     disp('Error in target to move robotic arm!');
+            %     sim.terminate();
+            %     return;
+            % end
+            armJoints(1)=0*pi/180;
+            armJoints(2)=0*pi/180;
+            armJoints(3)=0*pi/180;
+            armJoints(4)=0*pi/180;
+            armJoints(5)=0*pi/180;
+            armJoints(6)=0*pi/180;
+            armJoints(7)=0*pi/180;
             
             error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
             if error == 1
