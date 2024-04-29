@@ -180,6 +180,7 @@ delay_exitPark = 0;
 close_gripper = 0;
 open_gripper = 0;
 isGripperClosed = 0;
+isGripperOpened = 0;
 delay_grip = 0;
 armMoved = 0;
 delay_movArm = 0;
@@ -407,6 +408,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                 isGripperClosed = 1;
                 
             elseif(delay_grip > 6)
+                isGripperClosed = 0;
                 close_gripper = 0;
                 delay_grip = 0;
                 picked = 1; %todo: Change State Aux Flag
@@ -462,14 +464,18 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         
         else
             delay_grip = delay_grip + toc(start);
-            if(delay_grip > 3)
+            if(delay_grip > 3 && isGripperOpened == 0)
                 error = robot_arm.open_hand();
                 if error == 1
                     sim.terminate();
                     return;
                 end
-                delay_grip = 0;
+                isGripperOpened = 1;
+                
+            elseif(delay_grip > 6)
+                isGripperOpened = 0;
                 open_gripper = 0;
+                delay_grip = 0;
                 picked = 0;
                 placed = 1; %todo: Change State Aux Flag
             end
@@ -510,6 +516,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         else
             delay_movArm = delay_movArm + toc(start);
             if(delay_movArm > 5)
+                armMoved = 0;
                 delay_movArm = 0;
                 if(picked == 1)
                     transPosArm = 1; %todo: Change State Aux Flag
@@ -592,6 +599,13 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
             nextState = states.MoveArm;
         else
             nextState = states.PickBox;
+        end
+    
+    elseif(currentState == states.PlaceBox)
+        if(placed == 1)
+            nextState = states.MoveArm;
+        else
+            nextState = states.PlaceBox;
         end
 
     elseif(currentState == states.MoveArm)
