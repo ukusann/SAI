@@ -192,15 +192,16 @@ currentState = states.GoToTarget;
 nextState = currentState;
 move_arm = 0;
 go_to_target = 1;
+
 parkPositionReached = 0;
 isParked = 0;
 picked = 0;
 transPosArm = 0;
 defPosArm = 0;
 exitPark = 0;
+placed = 0;
 
 stopSim = 0;
-placed = 0;
 %*==================================================
 
 %*---------------------- Initial Commands -------------------
@@ -501,7 +502,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                 end
                 armMoved = 1;
             elseif(placed == 1) % Move to default position
-                error = robot_arm.set_joints_defPos() %send value for arm Joints in rad
+                error = robot_arm.set_joints_defPos(); %send value for arm Joints in rad
                 if error == 1
                     sim.terminate();
                     return;
