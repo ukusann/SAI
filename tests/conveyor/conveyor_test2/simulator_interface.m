@@ -12,7 +12,7 @@ classdef simulator_interface < handle
         clientID
         TargetHandle
         ConveyorOutHandle % handle for the conveyor out object
-        ConveyorInHandle % handle for the conveyor in object
+        ConveyorInHandle  % handle for the conveyor in object
     end
     
     properties
@@ -88,7 +88,7 @@ classdef simulator_interface < handle
                 end
             end
             
-            %Get ConveyorBelt Handle
+            %Get ConveyorOut Handle
             [res, obj.ConveyorOutHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, '/conveyor_out', obj.vrep.simx_opmode_blocking);
             if (res ~= obj.vrep.simx_return_ok)
                 disp('ERROR: Failed getting conveyor out handle');
@@ -96,7 +96,7 @@ classdef simulator_interface < handle
                 return;
             end
 
-            %Get ConveyorBelt Handle
+            %Get ConveyorIn Handle
             [res, obj.ConveyorInHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, '/conveyor_in', obj.vrep.simx_opmode_blocking);
             if (res ~= obj.vrep.simx_return_ok)
                 disp('ERROR: Failed getting conveyor in handle');
@@ -104,15 +104,16 @@ classdef simulator_interface < handle
                 return;
             end
             
-            
-            [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', 0, obj.vrep.simx_opmode_oneshot);
+            %Set ConveyorOut velocity to 0
+            [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocityOut', 0, obj.vrep.simx_opmode_oneshot);
             if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
                 disp('ERROR: Failed set conveyorbelt velocity!');
                 error=1;
                 return;
             end
 
-             [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity_in', 0, obj.vrep.simx_opmode_oneshot);
+            %Set ConveyorIn velocity to 0
+            [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocityIn', 0, obj.vrep.simx_opmode_oneshot);
             if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
                 disp('ERROR: Failed set conveyorbelt_in velocity!');
                 error=1;
@@ -167,9 +168,9 @@ classdef simulator_interface < handle
             error = 0;
 
              if(sel_conv==1)
-                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity_in', value, obj.vrep.simx_opmode_oneshot);
+                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocityIn', value, obj.vrep.simx_opmode_oneshot);
             elseif(sel_conv==2)
-                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', value, obj.vrep.simx_opmode_oneshot);
+                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocityOut', value, obj.vrep.simx_opmode_oneshot);
             else 
                 disp('ERROR: Failed selecting conveyor!');
                 error = 1;
@@ -177,7 +178,7 @@ classdef simulator_interface < handle
             end 
          
             if (res ~= obj.vrep.simx_return_ok )
-                disp('ERROR: Failed stopping belt!');
+                disp('ERROR: Failed stopping conveyor!');
                 error=1;
                 return;
             end
@@ -188,9 +189,9 @@ classdef simulator_interface < handle
             value = 0.1;
             error = 0;
             if(sel_conv==1)
-                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity_in', value, obj.vrep.simx_opmode_oneshot);
+                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocityIn', value, obj.vrep.simx_opmode_oneshot);
             elseif(sel_conv==2)
-                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', value, obj.vrep.simx_opmode_oneshot);
+                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocityOut', value, obj.vrep.simx_opmode_oneshot);
             else 
                 disp('ERROR: Failed selecting conveyor!');
                 error = 1;
@@ -198,9 +199,8 @@ classdef simulator_interface < handle
             end 
 
             if (res ~= obj.vrep.simx_return_ok )
-                disp('ERROR: Failed moving belt!');
+                disp('ERROR: Failed moving conveyor!');
                 error = 1;
-            
                 return;
             end
         end

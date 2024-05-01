@@ -134,7 +134,7 @@ psi_obs     = zeros(obsSensorNumber, 1);
 
 Fobs = 0;
 f_stock = sqrt(Q)*rand(1,obsSensorNumber);
-changeTargetDist = 50;
+changeTargetDist = 40;
 sim.move_conveyorbelt(2);
 
 
