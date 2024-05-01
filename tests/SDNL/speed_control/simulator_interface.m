@@ -12,6 +12,7 @@ classdef simulator_interface < handle
         clientID
         TargetHandle
         ConveyorOutHandle % handle for the conveyor out object
+        ConveyorInHandle % handle for the conveyor in object
     end
     
     properties
@@ -95,6 +96,15 @@ classdef simulator_interface < handle
                 return;
             end
 
+            %Get ConveyorBelt Handle
+            [res, obj.ConveyorInHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, 'conveyor_in', obj.vrep.simx_opmode_blocking);
+            if (res ~= obj.vrep.simx_return_ok)
+                disp('ERROR: Failed getting conveyor out handle');
+                error = 1;
+                return;
+            end
+            
+            
             [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', 0, obj.vrep.simx_opmode_oneshot);
             if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
                 disp('ERROR: Failed set conveyorbelt velocity!');
