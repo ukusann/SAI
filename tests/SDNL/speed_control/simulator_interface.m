@@ -89,7 +89,7 @@ classdef simulator_interface < handle
             end
             
             %Get ConveyorBelt Handle
-            [res, obj.ConveyorOutHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, 'conveyor_out', obj.vrep.simx_opmode_blocking);
+            [res, obj.ConveyorOutHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, '/conveyor_out', obj.vrep.simx_opmode_blocking);
             if (res ~= obj.vrep.simx_return_ok)
                 disp('ERROR: Failed getting conveyor out handle');
                 error = 1;
@@ -97,9 +97,9 @@ classdef simulator_interface < handle
             end
 
             %Get ConveyorBelt Handle
-            [res, obj.ConveyorInHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, 'conveyor_in', obj.vrep.simx_opmode_blocking);
+            [res, obj.ConveyorInHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, '/conveyor_in', obj.vrep.simx_opmode_blocking);
             if (res ~= obj.vrep.simx_return_ok)
-                disp('ERROR: Failed getting conveyor out handle');
+                disp('ERROR: Failed getting conveyor in handle');
                 error = 1;
                 return;
             end
@@ -111,6 +111,14 @@ classdef simulator_interface < handle
                 error=1;
                 return;
             end
+
+             [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity_in', 0, obj.vrep.simx_opmode_oneshot);
+            if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
+                disp('ERROR: Failed set conveyorbelt_in velocity!');
+                error=1;
+                return;
+            end
+
 
             %% Setup data streaming
             % simulation time
@@ -154,10 +162,20 @@ classdef simulator_interface < handle
         end
         
         %Function that allows you to put the conveyor belt stopped
-        function error = stop_conveyorbelt(obj)
+        function error = stop_conveyorbelt(obj,sel_conv)
             value = 0;
             error = 0;
-            [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', value, obj.vrep.simx_opmode_oneshot);
+
+             if(sel_conv==1)
+                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity_in', value, obj.vrep.simx_opmode_oneshot);
+            elseif(sel_conv==2)
+                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', value, obj.vrep.simx_opmode_oneshot);
+            else 
+                disp('ERROR: Failed selecting conveyor!');
+                error = 1;
+                return ;
+            end 
+         
             if (res ~= obj.vrep.simx_return_ok )
                 disp('ERROR: Failed stopping belt!');
                 error=1;
@@ -166,13 +184,23 @@ classdef simulator_interface < handle
         end
 
         %Function that allows you to put the conveyor belt in motion
-        function error = move_conveyorbelt(obj)
+        function error = move_conveyorbelt(obj,sel_conv)
             value = 0.1;
             error = 0;
-            [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', value, obj.vrep.simx_opmode_oneshot);
+            if(sel_conv==1)
+                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity_in', value, obj.vrep.simx_opmode_oneshot);
+            elseif(sel_conv==2)
+                [res] = obj.vrep.simxSetFloatSignal(obj.clientID, 'BeltVelocity', value, obj.vrep.simx_opmode_oneshot);
+            else 
+                disp('ERROR: Failed selecting conveyor!');
+                error = 1;
+                return ;
+            end 
+
             if (res ~= obj.vrep.simx_return_ok )
                 disp('ERROR: Failed moving belt!');
                 error = 1;
+            
                 return;
             end
         end

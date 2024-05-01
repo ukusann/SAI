@@ -135,6 +135,8 @@ psi_obs     = zeros(obsSensorNumber, 1);
 Fobs = 0;
 f_stock = sqrt(Q)*rand(1,obsSensorNumber);
 changeTargetDist = 50;
+sim.move_conveyorbelt(2);
+
 
 %*==================================================
 %%%---------------------- Start Robot Motion Behavior -------------------
@@ -268,10 +270,12 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     if(d<changeTargetDist)    
         if(itarget==1)
             itarget=2;
-            sim.move_conveyorbelt();
+            sim.move_conveyorbelt(1);
+            sim.stop_conveyorbelt(2);
   
         elseif(itarget==2)
-            sim.stop_conveyorbelt();
+            sim.stop_conveyorbelt(1);
+            sim.move_conveyorbelt(2);
             itarget=3;
         else
             vrobot_x =0;
