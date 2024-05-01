@@ -156,7 +156,7 @@ B2 = 30;
 Q = 0.005;
 
 obsSensorNumber = 29;
-    
+
 lambda_obs  = zeros(obsSensorNumber, 1);
 sigma       = zeros(obsSensorNumber, 1);
 fobs        = zeros(obsSensorNumber, 1);
@@ -168,8 +168,9 @@ changeTargetDist = 40;
 euler_pass = 1/(lambdaTarget*10);
 init_parking = 0;
 exit_parking = 0;
-phi_parking = [pi/2, pi, 0];
+phi_parking = [pi/2, pi, 0, 0];  %porquê estes valores?
 delay = 0;
+flag_middle_position = 0;
 %*==================================================
 
 %*---------------------- Initial Commands -------------------
@@ -267,9 +268,9 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %*===============================================
     %*===============================================
     %*----------- BEGIN YOUR CODE HERE ----------- %
-
+    counter_target = 0;
     %-------------Navigation Direction-------------%
-    psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
+    psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); %Angle in radians
     ftar = -lambdaTarget*sin(phirobot - psitarget);
 
 
@@ -307,12 +308,12 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
     end
 
-    
+
     %----------------Parking System----------------%
-    if(init_parking == 1)
+    if(init_parking == 1 && itarget ~= 4)
         vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
         vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
-    
+
         ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
         wrobot = ftar;
     end
@@ -322,15 +323,21 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
             delay = 0;
             vrobot_y = 0.0;
             exit_parking = 0;
+
             if(itarget==1)
-                itarget=2;
-      
-            elseif(itarget==2)
-                itarget=3;
-            else
-                vrobot_x =0;
-                vrobot_y = 0;
+                itarget = 4;
+                middle_position = 0;
+            elseif(itarget == 4 && middle_position == 0)
+                itarget = 2;
+            elseif(itarget == 2)
+                itarget = 4;
+                middle_position = 1;
+            elseif(itarget == 4 && middle_position == 1)
+                itarget = 3;
+            elseif(itarget == 3)
+                itarget = 0; 
             end
+            
         else
             vrobot_x = vrobot_des * -cos(psitarget - phi_parking(itarget));
             vrobot_y = vrobot_des * -sin(psitarget - phi_parking(itarget));
@@ -338,25 +345,24 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
             wrobot = ftar;
         end
     end
-   
+
     %---------------Target Transition--------------%
     delta_y = YTARGET - yrobot;
     delta_x = XTARGET - xrobot;
     d = sqrt((delta_x)^2+(delta_y)^2);
-    if(d<changeTargetDist) 
+    if(d<changeTargetDist)
         init_parking = 0;
         exit_parking = 1;
         % if(exit_parking == 0)
         %     if(itarget==1)
         %         itarget=2;
-      
+
         %     elseif(itarget==2)
         %         itarget=3;
         %     else
         %         vrobot_x =0;
         %     end
-        % end   
-
+        % end
     end
     %*===============================================
     %*===============================================

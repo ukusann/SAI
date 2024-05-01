@@ -65,7 +65,7 @@ classdef simulator_interface < handle
             
             
             %TODO: Change here to support more targets
-            obj.TARGET_Number=3;
+            obj.TARGET_Number=4;
             
             % target handle
             
