@@ -1,4 +1,4 @@
-0%% IMPORTANT:
+%% IMPORTANT:
 % Before running this script, open the scenario in CoppeliaSim, e.g
 % Do not run simulation!
 %   Author: Luís Louro, llouro@dei.uminho.pt
