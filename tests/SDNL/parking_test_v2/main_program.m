@@ -174,7 +174,7 @@ euler_pass = 1/(lambdaTarget*10);
 %***** Parking System *****
 phi_parking = [pi/2, pi, 0, pi/2, pi];
 delay_exitPark = 0;
-
+delay_rotate = 0;
 %***********************
 
 %***** Robotic Arm *****
@@ -185,7 +185,7 @@ isGripperOpened = 0;
 delay_grip = 0;
 armMoved = 0;
 delay_movArm = 0;
-
+startRotate = 0;
 %***********************
 
 %***** System Flags *****
@@ -200,7 +200,7 @@ defPosArm = 0;
 exitPark = 0;
 move_omni = 0;
 placed = 0;
-
+defPositionReached = 0;
 %***** Temp Flags *****
 box_high = 1;
 box_low = 0;
@@ -353,12 +353,13 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %%? ---------- State Init Parking ------------
     if(currentState == states.InitParking)
         distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
+        psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
         if(distance<changeTargetDist)    
             isParked = 1; %todo: Change State Aux Flag
         else
-            vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
-            vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
-            ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
+            vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget))
+            vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget))
+            ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget))
             wrobot = ftar;
         end
     end
@@ -540,7 +541,16 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
             delay_exitPark = 0;
             vrobot_y = 0.0;
             exit_parking = 0;
-            if(itarget == 5)
+            if(itarget ~= 4)
+                itarget = 5;
+
+            else
+                vrobot_x = 0;
+                vrobot_y = 0;
+            end
+        else
+            if(itarget == 5) 
+                exitPark = 1; %todo: Change State
                 if(picked == 1)
                     itarget = 4;
                 else
@@ -553,16 +563,8 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                         waitForBox = 1;
                     end
                 end
-            
-            elseif(itarget ~= 4)
-                itarget = 5;
 
-            else
-                vrobot_x = 0;
-                vrobot_y = 0;
-            end
-        else
-            if(itarget ~= 4 && itarget ~= 5)
+            elseif(itarget ~= 4)
                 vrobot_x = vrobot_des * -cos(psitarget - phi_parking(itarget));
                 vrobot_y = vrobot_des * -sin(psitarget - phi_parking(itarget));
                 ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
@@ -576,15 +578,47 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %%? ------------------------------------------
 
     %%? ----------- State GoToDefPos -------------
+    if(currentState == states.GoToDefPos)
+        distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2)
+        if(distance <= changeTargetDist || startRotate == 1)
+            startRotate = 1;    
+            vrobot_x = 5 * cos(psitarget - phi_parking(itarget));
+            vrobot_y = 5 * sin(psitarget - phi_parking(itarget));
+            ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
+            wrobot = ftar;
+            delay_rotate = delay_rotate + toc(start);
+            if(delay_rotate > 5)
+                delay_rotate = 0;
+                startRotate = 0;
+                defPositionReached = 1; %todo: Change State Aux Flag
+            end
+        elseif(startRotate == 0)
+            vrobot_y = 0.0;
+            vrobot_x = 30;
+            psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot);
+            ftar = -lambdaTarget*sin(phirobot - psitarget);
+            wrobot = ftar;
+        end
+    end
     %%? ------------------------------------------
 
     %%? ------------ Update State ----------------
     if(currentState == states.GoToTarget)
         if(parkPositionReached == 1)
             parkPositionReached = 0; % Reset aux flag
-            nextState = states.InitParking; 
+            if(itarget == 5)
+                nextState = states.GoToDefPos; 
+            else
+                nextState = states.InitParking;
+            end
         else
             nextState = states.GoToTarget;
+        end
+
+    elseif(currentState == states.GoToDefPos)
+        if(defPositionReached)
+            defPositionReached = 0;
+            nextState = states.ExitParking;
         end
 
     elseif(currentState == states.InitParking)
@@ -628,6 +662,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         if(exitPark == 1)
             exitPark = 0;
             if(waitForBox == 1)
+                waitForBox = 0;
                 nextState = states.Idle;
             elseif(move_omni == 1) 
                 move_omni = 0;
