@@ -1,4 +1,4 @@
-% states.m
+% Enumeration class for the states
 
 classdef states
     enumeration

@@ -140,7 +140,7 @@ start = tic;
 %*==================================================
 %*=================Parameters=======================
 %******* Mobile Robot *******  
-vrobot_des  = 100;
+vrobot_min  = 30;
 lambdaTarget = 2.3;
 stop_time = 4;
 vinit = 50;
@@ -205,7 +205,7 @@ waitForBox = 0;
 %*==================================================
 
 %*---------------------- Initial Commands -------------------
-stateMachine = statesHandle(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, B1, B2, Q);
+stateMachine = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, B1, B2, Q, changeTargetDist);
 currentState = states.GoToTarget;
 nextState = currentState;
 sim.move_conveyorbelt();
@@ -308,77 +308,35 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     %%? ------------State GoToTarget--------------
     if(currentState == states.GoToTarget)
-       [vrobot_y, vrobot_x, wrobot, parkPositionReached] = stateMachine.handleGoToTarget(YTARGET, XTARGET, yrobot, xrobot, vrobot_x, phirobot, lambda_obs, psi_obs, sigma, fobs, theta_obs, dist);
+       [vrobot_y, vrobot_x, wrobot, parkPositionReached] = stateMachine.handlerGoToTarget(YTARGET, XTARGET, yrobot, xrobot, vrobot_x, phirobot, lambda_obs, psi_obs, sigma, fobs, theta_obs, dist);
     end
     %%? ------------------------------------------
 
     %%? ---------- State Init Parking ------------
     if(currentState == states.InitParking)
-        distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
-        psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
-        if(distance<changeTargetDist)    
-            isParked = 1; %todo: Change State Aux Flag
-        else
-            vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
-            vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
-            ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
-            wrobot = ftar;
-        end
+        [vrobot_y, vrobot_x, wrobot, isParked] = stateMachine.handlerInitParking(YTARGET, XTARGET, yrobot, xrobot, vrobot_min, phirobot, phi_parking(itarget));
     end
     %%? ------------------------------------------
 
     %%? -------------- State Pick ----------------
     if(currentState == states.PickBox)
-        % Force the robot to stop movement
-        vrobot_y = 0.0;
-        vrobot_x = 0.0;
-        % wrobot = 0.0;
-        if(close_gripper == 0)
+        [error, close_gripper, delay_grip, isGripperClosed, armJoints, setJoints, closeHand, picked] = stateMachine.handlerPickBox(itarget, close_gripper, delay_grip, isGripperClosed, start);
+        if error == 1
+            sim.terminate();
+            return;
+        end
 
-            if(itarget == 2)
-                armJoints(1)=90*pi/180;
-                armJoints(2)=0*pi/180;
-                armJoints(3)=-90*pi/180;
-                armJoints(4)=-90*pi/180;
-                armJoints(5)=90*pi/180;
-                armJoints(6)=0*pi/180;
-                armJoints(7)=0*pi/180;
-            elseif(itarget == 3)
-                armJoints(1)=90*pi/180;
-                armJoints(2)=0*pi/180;
-                armJoints(3)=-90*pi/180;
-                armJoints(4)=-90*pi/180;
-                armJoints(5)=90*pi/180;
-                armJoints(6)=0*pi/180;
-                armJoints(7)=0*pi/180;
-            else
-                disp('Error in target to move robotic arm!');
-                sim.terminate();
-                return;
-            end
-            
-            error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
+        if(setJoints == 1)
+            error = robot_arm.set_joints(armJoints);
             if error == 1
                 sim.terminate();
                 return;
             end
-            close_gripper = 1;
-        
-        else
-            delay_grip = delay_grip + toc(start);
-            if(delay_grip > 3 && isGripperClosed == 0)
-                error = robot_arm.close_hand();
-                if error == 1
-                    sim.terminate();
-                    return;
-                end
-                isGripperClosed = 1;
-                
-            elseif(delay_grip > 6)
-                isGripperClosed = 0;
-                close_gripper = 0;
-                delay_grip = 0;
-                picked = 1; %todo: Change State Aux Flag
+        elseif(closeHand == 1)
+            error = robot_arm.close_hand();
+            if error == 1
+                sim.terminate();
+                return;
             end
         end
     end
@@ -386,65 +344,23 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     %%? -------------- State Place ---------------
     if(currentState == states.PlaceBox)
-        % Force the robot to stop movement
-        vrobot_y = 0.0;
-        vrobot_x = 0.0;
-        % wrobot = 0.0;
-        if(open_gripper == 0)
+        [error, open_gripper, delay_grip, isGripperOpened, armJoints, setJoints, openHand, picked, placed] = stateMachine.handlerPlaceBox(itarget, open_gripper, delay_grip, isGripperOpened, start);
+        if error == 1
+            sim.terminate();
+            return;
+        end
 
-            % if(itarget == 2)
-            %     armJoints(1)=0*pi/180;
-            %     armJoints(2)=0*pi/180;
-            %     armJoints(3)=0*pi/180;
-            %     armJoints(4)=0*pi/180;
-            %     armJoints(5)=0*pi/180;
-            %     armJoints(6)=0*pi/180;
-            %     armJoints(7)=0*pi/180;
-                
-            % elseif(itarget == 3)
-            %     armJoints(1)=0*pi/180;
-            %     armJoints(2)=0*pi/180;
-            %     armJoints(3)=0*pi/180;
-            %     armJoints(4)=0*pi/180;
-            %     armJoints(5)=0*pi/180;
-            %     armJoints(6)=0*pi/180;
-            %     armJoints(7)=0*pi/180;
-            % else
-            %     disp('Error in target to move robotic arm!');
-            %     sim.terminate();
-            %     return;
-            % end
-            armJoints(1)=90*pi/180;
-            armJoints(2)=0*pi/180;
-            armJoints(3)=-90*pi/180;
-            armJoints(4)=-90*pi/180;
-            armJoints(5)=90*pi/180;
-            armJoints(6)=0*pi/180;
-            armJoints(7)=0*pi/180;
-            
-            error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
+        if(setJoints == 1)
+            error = robot_arm.set_joints(armJoints);
             if error == 1
                 sim.terminate();
                 return;
             end
-            open_gripper = 1;
-        
-        else
-            delay_grip = delay_grip + toc(start);
-            if(delay_grip > 3 && isGripperOpened == 0)
-                error = robot_arm.open_hand();
-                if error == 1
-                    sim.terminate();
-                    return;
-                end
-                isGripperOpened = 1;
-                
-            elseif(delay_grip > 6)
-                isGripperOpened = 0;
-                open_gripper = 0;
-                delay_grip = 0;
-                picked = 0;
-                placed = 1; %todo: Change State Aux Flag
+        elseif(openHand == 1)
+            error = robot_arm.open_hand();
+            if error == 1
+                sim.terminate();
+                return;
             end
         end
     end
@@ -452,44 +368,21 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     %%? -------------- State MoveArm -------------
     if(currentState == states.MoveArm)
-        if(armMoved == 0)
-            if(picked == 1) % Move to transport position
-                armJoints(1)=-90*pi/180;
-                armJoints(2)=0*pi/180;
-                armJoints(3)=90*pi/180;
-                armJoints(4)=90*pi/180;
-                armJoints(5)=-90*pi/180;
-                armJoints(6)=0*pi/180;
-                armJoints(7)=0*pi/180;
-                error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
-                if error == 1
-                    sim.terminate();
-                    return;
-                end
-                armMoved = 1;
-            elseif(placed == 1) % Move to default position
-                error = robot_arm.set_joints_defPos(); %send value for arm Joints in rad
-                if error == 1
-                    sim.terminate();
-                    return;
-                end
-                armMoved = 1;
-                
+        [error, armMoved, delay_movArm, armJoints, setJoints, transPosArm, defPosArm] = stateMachine.handlerMoveArm(armMoved, picked, placed, delay_movArm, start);
+        if error == 1
+            sim.terminate();
+            return;
+        end
+
+        if(setJoints == 1)
+            if(placed == 1)
+                error = robot_arm.set_joints_defPos();
             else
-                disp('Error: Cannot identify if box was picked or placed!')
+                error = robot_arm.set_joints(armJoints);
+            end
+            if error == 1
                 sim.terminate();
                 return;
-            end
-        else
-            delay_movArm = delay_movArm + toc(start);
-            if(delay_movArm > 5)
-                armMoved = 0;
-                delay_movArm = 0;
-                if(picked == 1)
-                    transPosArm = 1; %todo: Change State Aux Flag
-                elseif(placed == 1)
-                    defPosArm = 1; %todo: Change State Aux Flag
-                end
             end
         end
     end
@@ -497,70 +390,13 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     %%? ---------- State Exit Parking ------------
     if(currentState == states.ExitParking)
-        delay_exitPark = delay_exitPark + toc(start);
-        if(delay_exitPark > 5)
-            exitPark = 1; %todo: Change State
-            delay_exitPark = 0;
-            vrobot_y = 0.0;
-            exit_parking = 0;
-            if(itarget ~= 4)
-                itarget = 5;
-
-            else
-                vrobot_x = 0;
-                vrobot_y = 0;
-            end
-        else
-            if(itarget == 5) 
-                exitPark = 1; %todo: Change State
-                if(picked == 1)
-                    itarget = 4;
-                else
-                    move_omni = 1; %todo: Change State
-                    if(box_high == 1)
-                        itarget = 2;
-                    elseif(box_low == 1)
-                        itarget = 3;
-                    else
-                        waitForBox = 1;
-                    end
-                end
-
-            elseif(itarget ~= 4)
-                vrobot_x = vrobot_des * -cos(psitarget - phi_parking(itarget));
-                vrobot_y = vrobot_des * -sin(psitarget - phi_parking(itarget));
-                ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
-                wrobot = ftar;
-            else
-                vrobot_x = 0;
-                vrobot_y = 0;
-            end
-        end
+        [vrobot_y, vrobot_x, wrobot, itarget, delay_exitPark, waitForBox, move_omni, exitPark] = stateMachine.handlerExitParking(YTARGET, XTARGET, yrobot, xrobot, vrobot_min, phirobot, phi_parking(itarget), box_low, box_high, picked, itarget, delay_exitPark, start);
     end
     %%? ------------------------------------------
 
     %%? ----------- State GoToDefPos -------------
     if(currentState == states.GoToDefPos)
-        distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
-        if(distance <= changeTargetDist || startRotate == 1)
-            startRotate = 1;    
-            vrobot_x = 5 * cos(psitarget - phi_parking(itarget));
-            vrobot_y = 5 * sin(psitarget - phi_parking(itarget));
-            ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
-            wrobot = ftar;
-            delay_rotate = delay_rotate + toc(start);
-            if(delay_rotate > 5)
-                delay_rotate = 0;
-                startRotate = 0;
-                defPositionReached = 1; %todo: Change State Aux Flag
-            end
-        elseif(startRotate == 0)
-            vrobot_y = 0.0;
-            vrobot_x = 30;
-            psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot);
-            ftar = -lambdaTarget*sin(phirobot - psitarget);
-            wrobot = ftar;
-        end
+        [vrobot_y, vrobot_x, wrobot, startRotate, delay_rotate, defPositionReached] = stateMachine.handlerGoToDefPos(YTARGET, XTARGET, yrobot, xrobot, startRotate, phirobot, phi_parking(itarget), delay_rotate, start);
     end
     %%? ------------------------------------------
 
