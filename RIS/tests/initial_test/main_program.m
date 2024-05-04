@@ -10,32 +10,56 @@
 %--------------------------------------------------------------------------
 clear
 % need to choose the arm to control
-robot_name = 'UR10';
+% robot_name = 'UR10';
 %robot_name = 'Kuka_LBRiisy';
-%robot_name = 'LBR_iiwa_14_R820';
+robot_name = 'LBR_iiwa_14_R820';
 
 % need to choose the gripper/hand
 hand_name = 'RG2';
 
 %Number of targets for each colour of box
 salsageCan  = [1, 2, 3];
-salsageCanPos = zeros(3, 1);
+salsageCanPos = zeros(3, 3);
 mushroomCan = [4, 5, 6];
-mushroomCanPos = zeros(3, 1);
+mushroomCanPos = zeros(3, 3);
 
 %Number of positions in the shelves
 frontShelf1 = [ 1,  2,  3,  4,  5,  6,  7,  8];
-frontShelf1Pos = zeros(8, 1);
+frontShelf1Pos = zeros(8, 3);
 frontShelf2 = [ 9, 10, 11, 12, 13, 14, 15, 16];
-frontShelf2Pos = zeros(8, 1);
+frontShelf2Pos = zeros(8, 3);
 frontShelf3 = [17, 18, 19, 20, 21, 22, 23, 24];
-frontShelf3Pos = zeros(8, 1);
+frontShelf3Pos = zeros(8, 3);
 frontShelf4 = [25, 26, 27, 28, 29, 30, 31, 32];
-frontShelf4Pos = zeros(8, 1);
+frontShelf4Pos = zeros(8, 3);
 frontShelf5 = [33, 34, 35, 36, 37, 38, 39, 40];
-frontShelf5Pos = zeros(8, 1);
+frontShelf5Pos = zeros(8, 3);
 frontShelf6 = [41, 42, 43, 44, 45, 46, 47, 48];
-frontShelf6Pos = zeros(8, 1);
+frontShelf6Pos = zeros(8, 3);
+
+
+%*Variables of robotic arm
+% Joint limits
+kuka_joint_lim_min = pi/180*[-170, -120, -170, -120, -170, -120, -175];
+kuka_joint_lim_max = pi/180*[ 170,  120,  170,  120,  170,  120,  175];
+
+% Speed limits
+kuka_vel_lim = pi/180*[85, 85, 100, 75, 130, 135, 135];
+
+% Links
+links = [0.36, 0.42, 0.4, 0.126];
+
+% Denavit-Hartenberg modified parameters: alpha(i-1), a(i-1), di, thetai
+dh_alpha = pi/180*[0, 90, -90, 90, -90, 90, -90];
+dh_a = pi/180*[0, 0, 0, 0, 0, 0, 0];
+dh_d = [links(1), 0, links(2), 0, links(3), 0, links(4)];
+dh_theta = pi/180*[-90, 0, 0, 0, 0, 0, -180];
+
+
+%* Creation of kinematics class
+kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, links);
+
+
 
 % Creation of a communication class object with the simulator
 % Try to connect to simulator
@@ -103,7 +127,7 @@ while stop==0
     sim.ensure_all_data();
 
     % ReadArmJoints - get joint value (rad) for arm
-    [error,ReadArmJoints] = robot_arm.get_joints()
+    [error,ReadArmJoints] = robot_arm.get_joints();
     if error == 1
         sim.terminate();
         return;
@@ -118,13 +142,13 @@ while stop==0
 
     % objectPosition - get object position
     for i = 1:3
-        [error, salsageCanPos(i)] = sim.get_object_position(salsageCan(i));
+        [error, salsageCanPos(i, :)] = sim.get_object_position(salsageCan(i));
         if(error == 1)
             sim.terminate();
             return;
         end
- 
-        [error, mushroomCanPos(i)] = sim.get_object_position(mushroomCanPos(i));
+
+        [error, mushroomCanPos(i, :)] = sim.get_object_position(mushroomCan(i));
         if(error == 1)
             sim.terminate();
             return;
@@ -133,37 +157,37 @@ while stop==0
 
     % objectPosition - get target position
     for i = 1:8
-        [error,frontShelf1Pos(i)]=sim.get_object_position(frontShelf1(i));        
+        [error,frontShelf1Pos(i, :)]=sim.get_target_position(frontShelf1(i));        
         if(error == 1)
             sim.terminate();
             return;
         end
 
-        [error,frontShelf2Pos(i)]=sim.get_object_position(frontShelf2(i));        
+        [error,frontShelf2Pos(i, :)]=sim.get_target_position(frontShelf2(i));        
         if(error == 1)
             sim.terminate();
             return;
         end
 
-        [error,frontShelf3Pos(i)]=sim.get_object_position(frontShelf3(i));        
+        [error,frontShelf3Pos(i, :)]=sim.get_target_position(frontShelf3(i));        
         if(error == 1)
             sim.terminate();
             return;
         end
 
-        [error,frontShelf4Pos(i)]=sim.get_object_position(frontShelf4(i));        
+        [error,frontShelf4Pos(i, :)]=sim.get_target_position(frontShelf4(i));        
         if(error == 1)
             sim.terminate();
             return;
         end
 
-        [error,frontShelf5Pos(i)]=sim.get_object_position(frontShelf5(i));        
+        [error,frontShelf5Pos(i, :)]=sim.get_target_position(frontShelf5(i));        
         if(error == 1)
             sim.terminate();
             return;
         end
 
-        [error,frontShelf6Pos(i)]=sim.get_object_position(frontShelf6(i));        
+        [error,frontShelf6Pos(i, :)]=sim.get_target_position(frontShelf6(i));        
         if(error == 1)
             sim.terminate();
             return;

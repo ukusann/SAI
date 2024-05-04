@@ -2,9 +2,9 @@
 
 classdef kinematics < handle
     properties
-        kuka_joint_lim_min
-        kuka_joint_lim_max  
-        Link  
+        kuka_joint_lim_min  % Array with size equal to number of joints
+        kuka_joint_lim_max  % Array with size equal to number of joints 
+        Link                % Array with size equal to number of joints
     end
     methods
         function obj = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Link)
@@ -22,7 +22,7 @@ classdef kinematics < handle
                     ];
         end
 
-        function RPYmatrix = RPYMatrix(yaw_x, pitch_y, roll_z)
+        function RPYmatrix = RPYTransfMatrix(yaw_x, pitch_y, roll_z)
             RPYmatrix = [
                     cos(roll_z)*cos(pitch_y)    -sin(roll_z)*cos(yaw_x)+cos(roll_z)*sin(pitch_y)*sen(yaw_x)      sin(roll_z)*sen(yaw_x)+cos(roll_z)*sin(pitch_y)*cos(yaw_x);
                     sin(roll_z)*cos(pitch_y)     cos(roll_z)*cos(yaw_x)+sen(roll_z)*sin(pitch_y)*sen(yaw_x)     -cos(roll_z)*sin(yaw_x)+sin(roll_z)*sin(pitch_y)*cos(yaw_x);
@@ -30,7 +30,7 @@ classdef kinematics < handle
                     ];
         end
 
-        function [yaw_x, pitch_y, roll_z] = computeRPY(rot)
+        function [yaw_x, pitch_y, roll_z] = computeMatrixToRPY(rot)
             psi = atan2(-rot(3,1),sqrt(rot(1,1)^2+rot(2,1)^2));
             
             if (abs(psi - pi/2) < 0.01)     % psi == pi/2 % 
