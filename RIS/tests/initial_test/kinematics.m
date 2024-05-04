@@ -13,8 +13,8 @@ classdef kinematics < handle
             obj.Link = Link;
         end
 
-        function matrix = transfMatrix(alpha, a, d, theta)
-            matrix = [
+        function transfMatrix = dhTransfMatrix(alpha, a, d, theta)
+            transfMatrix = [
                     cos(theta)               -sin(theta)               0               a;
                     sin(theta)*cos(alpha)     cos(theta)*cos(alpha)   -sin(alpha)     -sin(alpha)*d;
                     sin(theta)*sin(alpha)     cos(theta)*sin(alpha)    cos(alpha)      cos(alpha)*d;
@@ -22,8 +22,8 @@ classdef kinematics < handle
                     ];
         end
 
-        function matrix = RPYMatrix(yaw_x, pitch_y, roll_z)
-            matrix = [
+        function RPYmatrix = RPYMatrix(yaw_x, pitch_y, roll_z)
+            RPYmatrix = [
                     cos(roll_z)*cos(pitch_y)    -sin(roll_z)*cos(yaw_x)+cos(roll_z)*sin(pitch_y)*sen(yaw_x)      sin(roll_z)*sen(yaw_x)+cos(roll_z)*sin(pitch_y)*cos(yaw_x);
                     sin(roll_z)*cos(pitch_y)     cos(roll_z)*cos(yaw_x)+sen(roll_z)*sin(pitch_y)*sen(yaw_x)     -cos(roll_z)*sin(yaw_x)+sin(roll_z)*sin(pitch_y)*cos(yaw_x);
                    -sin(pitch_y)                 cos(pitch_y)*sin(yaw_x)                                         cos(pitch_y)*cos(yaw_x)
