@@ -357,9 +357,9 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         if(distance<changeTargetDist)    
             isParked = 1; %todo: Change State Aux Flag
         else
-            vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget))
-            vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget))
-            ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget))
+            vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
+            vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
+            ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
             wrobot = ftar;
         end
     end
@@ -579,7 +579,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     %%? ----------- State GoToDefPos -------------
     if(currentState == states.GoToDefPos)
-        distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2)
+        distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
         if(distance <= changeTargetDist || startRotate == 1)
             startRotate = 1;    
             vrobot_x = 5 * cos(psitarget - phi_parking(itarget));
@@ -675,8 +675,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
     end
 
-    currentState = nextState
-    itarget
+    currentState = nextState;
     %%? ------------------------------------------
     %*===============================================
     %*===============================================
