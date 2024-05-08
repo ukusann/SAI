@@ -38,29 +38,6 @@ frontShelf6 = [41, 42, 43, 44, 45, 46, 47, 48];
 frontShelf6Pos = zeros(8, 3);
 
 
-%*Variables of robotic arm
-% Joint limits
-kuka_joint_lim_min = pi/180*[-170, -120, -170, -120, -170, -120, -175];
-kuka_joint_lim_max = pi/180*[ 170,  120,  170,  120,  170,  120,  175];
-
-% Speed limits
-kuka_vel_lim = pi/180*[85, 85, 100, 75, 130, 135, 135];
-
-% Links
-links = [0.36, 0.42, 0.4, 0.126];
-
-% Denavit-Hartenberg modified parameters: alpha(i-1), a(i-1), di, thetai
-dh_alpha = pi/180*[0, 90, -90, 90, -90, 90, -90];
-dh_a = pi/180*[0, 0, 0, 0, 0, 0, 0];
-dh_d = [links(1), 0, links(2), 0, links(3), 0, links(4)];
-dh_theta = pi/180*[-90, 0, 0, 0, 0, 0, -180];
-
-
-%* Creation of kinematics class
-kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, links);
-
-
-
 % Creation of a communication class object with the simulator
 % Try to connect to simulator
 % Output:
@@ -91,6 +68,7 @@ if error == 1
     sim.terminate();
     return;
 end
+
 [error,nJoints,Links,DistanceHand,MinPositionJoint,MaxPositionJoint] = robot_arm.get_RobotCharacteristics();
 %nJoints - number of arm joints.
 %Links - dimensions of the links between the axes of rotation
@@ -98,6 +76,13 @@ end
 % the hand
 %MinPositionJoint - array with minimum position for joint 1-6
 %MaxPositionJoint - array with maximum position for joint 1-6
+if error == 1
+    sim.terminate();
+    return;
+end
+
+[error,theta] = robot_arm.get_joints();
+%theta - Values for each joint.
 if error == 1
     sim.terminate();
     return;
@@ -115,10 +100,63 @@ if error == 1
     sim.terminate();
     return;
 end
-
+%*==================================================
+%*=================Parameters=======================
+%******* Default Variables ******* 
 start = tic;
 m=1;
 stop=0;
+%***********************
+
+
+%*Variables of robotic arm
+% Joint limits
+kuka_joint_lim_min = MinPositionJoint;
+kuka_joint_lim_max = MaxPositionJoint;
+
+% Speed limits
+kuka_vel_lim = pi/180*[85, 85, 100, 75, 130, 135, 135];
+
+% Denavit-Hartenberg modified parameters: alpha(i-1), a(i-1), di, thetai
+dh_alpha = pi/180*[0, -90, 90, -90, 90, -90, 90];
+dh_a = pi/180*[0, 0, 0, 0, 0, 0, 0];
+dh_d = [Links(1), 0, Links(2), 0, Links(3), 0, Links(4)];
+dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0];
+
+
+%*Creation of kinematics class
+kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
+
+%* Compute individual transformation matrices
+transf_01 = kuka_kinematics.dhTransfMatrix(dh_alpha(1), dh_a(1), dh_d(1), dh_theta(1) + theta(1));
+transf_12 = kuka_kinematics.dhTransfMatrix(dh_alpha(2), dh_a(2), dh_d(2), dh_theta(2) + theta(2));
+transf_23 = kuka_kinematics.dhTransfMatrix(dh_alpha(3), dh_a(3), dh_d(3), dh_theta(3) + theta(3));
+transf_34 = kuka_kinematics.dhTransfMatrix(dh_alpha(4), dh_a(4), dh_d(4), dh_theta(4) + theta(4));
+transf_45 = kuka_kinematics.dhTransfMatrix(dh_alpha(1), dh_a(5), dh_d(5), dh_theta(5) + theta(5));
+transf_56 = kuka_kinematics.dhTransfMatrix(dh_alpha(6), dh_a(6), dh_d(6), dh_theta(6) + theta(6));
+transf_67 = kuka_kinematics.dhTransfMatrix(dh_alpha(7), dh_a(7), dh_d(7), dh_theta(7) + theta(7));
+
+%* Compute general transformation matrix T_BE
+transf_07 = transf_01*transf_12*transf_23*transf_34*transf_45*transf_56*transf_67;
+
+%* Cartesian coordinates of Tip {7} with respect to base {0}
+xe_0=transf_07(1,4);
+ye_0=transf_07(2,4);
+ze_0=transf_07(3,4);
+pe_0=[xe_0, ye_0, ze_0]';
+
+
+%* Orientation of Tip {7} with respect to base {0}: Roll-Pitch-Yaw
+%angles:
+rotation_07 = transf_07(1:3,1:3); 
+[yaw_x, pitch_y, roll_z] = kuka_kinematics.computeMatrixToRPY(rotation_07);
+Tip_orientation_deg = [yaw_x, pitch_y, roll_z]'*180/pi;
+
+%* Conclusion of Direct kinematics
+% Tip pose:
+Pose_Tip = [pe_0; Tip_orientation_deg]
+
+%*==================================================
 while stop==0
     %----------------------------------------------------------------------
     %% Robot interface

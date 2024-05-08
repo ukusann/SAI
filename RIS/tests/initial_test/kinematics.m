@@ -13,7 +13,7 @@ classdef kinematics < handle
             obj.Link = Link;
         end
 
-        function transfMatrix = dhTransfMatrix(alpha, a, d, theta)
+        function transfMatrix = dhTransfMatrix(~, alpha, a, d, theta)
             transfMatrix = [
                     cos(theta)               -sin(theta)               0               a;
                     sin(theta)*cos(alpha)     cos(theta)*cos(alpha)   -sin(alpha)     -sin(alpha)*d;
@@ -22,7 +22,7 @@ classdef kinematics < handle
                     ];
         end
 
-        function RPYmatrix = RPYTransfMatrix(yaw_x, pitch_y, roll_z)
+        function RPYmatrix = RPYTransfMatrix(~, yaw_x, pitch_y, roll_z)
             RPYmatrix = [
                     cos(roll_z)*cos(pitch_y)    -sin(roll_z)*cos(yaw_x)+cos(roll_z)*sin(pitch_y)*sen(yaw_x)      sin(roll_z)*sen(yaw_x)+cos(roll_z)*sin(pitch_y)*cos(yaw_x);
                     sin(roll_z)*cos(pitch_y)     cos(roll_z)*cos(yaw_x)+sen(roll_z)*sin(pitch_y)*sen(yaw_x)     -cos(roll_z)*sin(yaw_x)+sin(roll_z)*sin(pitch_y)*cos(yaw_x);
@@ -30,7 +30,7 @@ classdef kinematics < handle
                     ];
         end
 
-        function [yaw_x, pitch_y, roll_z] = computeMatrixToRPY(rot)
+        function [yaw_x, pitch_y, roll_z] = computeMatrixToRPY(~, rot)
             psi = atan2(-rot(3,1),sqrt(rot(1,1)^2+rot(2,1)^2));
             
             if (abs(psi - pi/2) < 0.01)     % psi == pi/2 % 
@@ -43,6 +43,17 @@ classdef kinematics < handle
             else
                 phi = atan2(rot(2,1)/cos(psi),rot(1,1)/cos(psi));
                 theta = atan2(rot(3,2)/cos(psi),rot(3,3)/cos(psi));
+            end
+            if(abs(theta) < 0.01)
+                theta = 0.0;
+            end
+
+            if(abs(psi) < 0.01)
+                psi = 0.0;
+            end
+
+            if(abs(phi) < 0.01)
+                phi = 0.0;
             end
             yaw_x = theta;
             pitch_y = psi;
