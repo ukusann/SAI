@@ -16,7 +16,7 @@ classdef kinematics < handle
         %*********************Direct Kinematics *************************
         function poseHand = directKinematics(obj, dh_alpha, dh_a, dh_d, dh_theta, theta)
             %* Compute individual transformation matrices
-            % transf_w0 = obj.dhTransfMatrix(dh_alpha(1), dh_a(1), dh_d(1), dh_theta(1));
+            transf_w0 = obj.dhTransfMatrix(dh_alpha(1), dh_a(1), dh_d(1), dh_theta(1))
             transf_01 = obj.dhTransfMatrix(dh_alpha(2), dh_a(2), dh_d(2), dh_theta(2) + theta(1));
             transf_12 = obj.dhTransfMatrix(dh_alpha(3), dh_a(3), dh_d(3), dh_theta(3) + theta(2));
             transf_23 = obj.dhTransfMatrix(dh_alpha(4), dh_a(4), dh_d(4), dh_theta(4) + theta(3));

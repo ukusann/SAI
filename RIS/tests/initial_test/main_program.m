@@ -138,15 +138,26 @@ kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 
 
 %************** Inverse Kinematics ******************
-alpha = -0.85;
-desPoseHand = [-0.09, -0.005, 1, 0, 90, 0]';
-[error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, desPoseHand)
+alpha = -25*pi/180;
+desPoseHand = [-0.55, 0.2, 1, 0, 0, 90]';
+tmp = [0.2, -0.55, 0.9, 0, 0, 90]';
+posHand_h = [desPoseHand(1:3); 1];
+transf_w0 = [
+            0 -1 0 0;
+            1 0 0 0; 
+            0 0 1 0;
+            0 0 0 1 
+            ];
+
+posHand_ref0_h = transf_w0 * posHand_h; 
+desPoseHand_ref0 = [posHand_ref0_h(1:3); desPoseHand(4:6)];
+[error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, tmp);
 if(error == 1)
     sim.terminate();
     return;
 end
 
-robot_arm.set_joints(joingAnglesSol4);
+robot_arm.set_joints(joingAnglesSol1);
 
 
 %****************************************************
