@@ -131,35 +131,25 @@ dh_theta_w = pi/180*90;
 %*Creation of kinematics class
 kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 
-%* Compute individual transformation matrices
-transf_w0 = kuka_kinematics.dhTransfMatrix(dh_alpha_w, dh_a_w, dh_d_w, dh_theta_w);
-transf_01 = kuka_kinematics.dhTransfMatrix(dh_alpha(1), dh_a(1), dh_d(1), dh_theta(1) + theta(1));
-transf_12 = kuka_kinematics.dhTransfMatrix(dh_alpha(2), dh_a(2), dh_d(2), dh_theta(2) + theta(2));
-transf_23 = kuka_kinematics.dhTransfMatrix(dh_alpha(3), dh_a(3), dh_d(3), dh_theta(3) + theta(3));
-transf_34 = kuka_kinematics.dhTransfMatrix(dh_alpha(4), dh_a(4), dh_d(4), dh_theta(4) + theta(4));
-transf_45 = kuka_kinematics.dhTransfMatrix(dh_alpha(5), dh_a(5), dh_d(5), dh_theta(5) + theta(5));
-transf_56 = kuka_kinematics.dhTransfMatrix(dh_alpha(6), dh_a(6), dh_d(6), dh_theta(6) + theta(6));
-transf_67 = kuka_kinematics.dhTransfMatrix(dh_alpha(7), dh_a(7), dh_d(7), dh_theta(7) + theta(7));
 
-%* Compute general transformation matrix T_BE
-transf_07 = transf_01 * transf_12 * transf_23 * transf_34 * transf_45 * transf_56 * transf_67;
-
-%* Cartesian coordinates of Tip {7} with respect to base {0}
-xh_0=transf_07(1,4);
-yh_0=transf_07(2,4);
-zh_0=transf_07(3,4);
-ph_0=[xh_0, yh_0, zh_0]';
+%************** Direct Kinematics ******************
+% poseHand = kuka_kinematics.directKinematics([dh_alpha_w; dh_alpha], [dh_a_w; dh_a], [dh_d_w; dh_d], [dh_theta_w; dh_theta], theta);
+%****************************************************
 
 
-%* Orientation of Tip {7} with respect to base {0}: Roll-Pitch-Yaw
-%angles:
-rotation_07 = transf_07(1:3,1:3); 
-[yaw_x, pitch_y, roll_z] = kuka_kinematics.computeMatrixToRPY(rotation_07);
-handOrientationDeg = [yaw_x, pitch_y, roll_z]'*180/pi;
+%************** Inverse Kinematics ******************
+alpha = -0.85;
+desPoseHand = [-0.09, -0.005, 1, 0, 90, 0]';
+[error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, desPoseHand)
+if(error == 1)
+    sim.terminate();
+    return;
+end
 
-%* Conclusion of Direct kinematics
-% Tip pose:
-poseHand = [ph_0; handOrientationDeg]
+robot_arm.set_joints(joingAnglesSol4);
+
+
+%****************************************************
 
 %*==================================================
 while stop==0
