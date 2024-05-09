@@ -145,21 +145,21 @@ transf_67 = kuka_kinematics.dhTransfMatrix(dh_alpha(7), dh_a(7), dh_d(7), dh_the
 transf_07 = transf_01 * transf_12 * transf_23 * transf_34 * transf_45 * transf_56 * transf_67;
 
 %* Cartesian coordinates of Tip {7} with respect to base {0}
-xe_0=transf_07(1,4);
-ye_0=transf_07(2,4);
-ze_0=transf_07(3,4);
-pe_0=[xe_0, ye_0, ze_0]';
+xh_0=transf_07(1,4);
+yh_0=transf_07(2,4);
+zh_0=transf_07(3,4);
+ph_0=[xh_0, yh_0, zh_0]';
 
 
 %* Orientation of Tip {7} with respect to base {0}: Roll-Pitch-Yaw
 %angles:
 rotation_07 = transf_07(1:3,1:3); 
 [yaw_x, pitch_y, roll_z] = kuka_kinematics.computeMatrixToRPY(rotation_07);
-Tip_orientation_deg = [yaw_x, pitch_y, roll_z]'*180/pi;
+handOrientationDeg = [yaw_x, pitch_y, roll_z]'*180/pi;
 
 %* Conclusion of Direct kinematics
 % Tip pose:
-poseTip = [pe_0; Tip_orientation_deg]
+poseHand = [ph_0; handOrientationDeg]
 
 %*==================================================
 while stop==0
