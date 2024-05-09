@@ -118,26 +118,31 @@ kuka_joint_lim_max = MaxPositionJoint;
 kuka_vel_lim = pi/180*[85, 85, 100, 75, 130, 135, 135];
 
 % Denavit-Hartenberg modified parameters: alpha(i-1), a(i-1), di, thetai
-dh_alpha = pi/180*[0, -90, 90, -90, 90, -90, 90];
-dh_a = pi/180*[0, 0, 0, 0, 0, 0, 0];
-dh_d = [Links(1), 0, Links(2), 0, Links(3), 0, Links(4)];
-dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0];
+dh_alpha = pi/180*[0, -90, 90, 90, -90, -90, 90]';
+dh_a = [0, 0, 0, 0, 0, 0, 0]';
+dh_d = [Links(1), 0, Links(2), 0, Links(3), 0, Links(4)]';
+dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
 
+dh_alpha_w = 0;
+dh_a_w = 0;
+dh_d_w = 0;
+dh_theta_w = pi/180*90;
 
 %*Creation of kinematics class
 kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 
 %* Compute individual transformation matrices
+transf_w0 = kuka_kinematics.dhTransfMatrix(dh_alpha_w, dh_a_w, dh_d_w, dh_theta_w);
 transf_01 = kuka_kinematics.dhTransfMatrix(dh_alpha(1), dh_a(1), dh_d(1), dh_theta(1) + theta(1));
 transf_12 = kuka_kinematics.dhTransfMatrix(dh_alpha(2), dh_a(2), dh_d(2), dh_theta(2) + theta(2));
 transf_23 = kuka_kinematics.dhTransfMatrix(dh_alpha(3), dh_a(3), dh_d(3), dh_theta(3) + theta(3));
 transf_34 = kuka_kinematics.dhTransfMatrix(dh_alpha(4), dh_a(4), dh_d(4), dh_theta(4) + theta(4));
-transf_45 = kuka_kinematics.dhTransfMatrix(dh_alpha(1), dh_a(5), dh_d(5), dh_theta(5) + theta(5));
+transf_45 = kuka_kinematics.dhTransfMatrix(dh_alpha(5), dh_a(5), dh_d(5), dh_theta(5) + theta(5));
 transf_56 = kuka_kinematics.dhTransfMatrix(dh_alpha(6), dh_a(6), dh_d(6), dh_theta(6) + theta(6));
 transf_67 = kuka_kinematics.dhTransfMatrix(dh_alpha(7), dh_a(7), dh_d(7), dh_theta(7) + theta(7));
 
 %* Compute general transformation matrix T_BE
-transf_07 = transf_01*transf_12*transf_23*transf_34*transf_45*transf_56*transf_67;
+transf_07 = transf_01 * transf_12 * transf_23 * transf_34 * transf_45 * transf_56 * transf_67;
 
 %* Cartesian coordinates of Tip {7} with respect to base {0}
 xe_0=transf_07(1,4);
@@ -154,7 +159,7 @@ Tip_orientation_deg = [yaw_x, pitch_y, roll_z]'*180/pi;
 
 %* Conclusion of Direct kinematics
 % Tip pose:
-Pose_Tip = [pe_0; Tip_orientation_deg]
+poseTip = [pe_0; Tip_orientation_deg]
 
 %*==================================================
 while stop==0
