@@ -1,7 +1,9 @@
+#!/usr/bin/env python
+
 import cv2
 import numpy as np
 
-image = cv2.imread('C:/Users/Vicente Pereira/Desktop/caixa pequena.png')
+image = cv2.imread('caixa_grande.jpg')
 cv2.imshow('image', image)
 
 #um valor de 30 permite distinguir a cor preta da caixa
