@@ -4,8 +4,10 @@ import cv2
 import numpy as np
 
 # image = cv2.imread('caixa_pequena.jpg')
-# image = cv2.imread('caixa_grande.jpg')
-image = cv2.imread('both_boxes.jpg')
+image = cv2.imread('caixa_grande.jpg')
+# image = cv2.imread('both_boxes.jpg')
+# image = cv2.imread('half_big_box.jpg')
+image = cv2.imread('bigBoxcut.jpg')
 cv2.imshow('image', image)
 
 # Convert the image to grayscale
@@ -34,7 +36,9 @@ for contour in contours:
 
 print(f'Total area: {areas}')
 print(f'Area size vector: {len(areas)}')
-if(len(areas) > 1):
+if(len(areas) == 0):
+    print("Error! Could not find any object!")
+elif(len(areas) > 1):
     print("Error! More than one object identified!")
 else:
     # check area value to identify box size
