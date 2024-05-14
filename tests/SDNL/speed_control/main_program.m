@@ -245,8 +245,8 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     end
     euler_pass = 1/(lambdaTarget*10);
     acc = -lambda_v*(vrobot_x - vrobot_des);
-    vrobot_x = vrobot_x + acc*euler_pass 
-    %vrobot_des = distance/stop_time;
+    vrobot_x = vrobot_x + acc*euler_pass; 
+    % vrobot_des = distance/stop_time;
     % if  (distance >= min_d_limit) && (distance <= max_d_limit) 
     %     vrobot_x = vrobot_x + euler_pass*(lambda_v*(vrobot_x-vrobot_des));
     % elseif (distance >= min_d_limit)

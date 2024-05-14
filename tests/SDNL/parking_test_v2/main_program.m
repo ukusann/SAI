@@ -357,21 +357,10 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         if(distance<changeTargetDist)    
             isParked = 1; %todo: Change State Aux Flag
         else
-            vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget))
-            vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget))
-            ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget))
+            vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
+            vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
+            ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
             wrobot = ftar;
-            if(itarget == 2 || itarget == 3)
-       
-        for i = 16:20
-            if fobs (i) > 0
-                k = (lambda_obs(i) * (sigma(i))^2) / sqrt(exp(1));
-                U_pot = lambda_obs(i) * (sigma(i)^2) * exp(-(phi - psi_obs(i))^2) / (2 * (sigma(i))^2) - k;
-                U_robot = U_pot + U_robot;
-                phi_parking(itarget) = phi_parking(itarget) + U_robot - k_phi;
-            end
-        end
-            end
         end
     end
     %%? ------------------------------------------
@@ -590,7 +579,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     %%? ----------- State GoToDefPos -------------
     if(currentState == states.GoToDefPos)
-        distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2)
+        distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
         if(distance <= changeTargetDist || startRotate == 1)
             startRotate = 1;    
             vrobot_x = 5 * cos(psitarget - phi_parking(itarget));
@@ -686,8 +675,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
     end
 
-    currentState = nextState
-    itarget
+    currentState = nextState;
     %%? ------------------------------------------
     %*===============================================
     %*===============================================
