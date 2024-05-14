@@ -3,39 +3,49 @@
 import cv2
 import numpy as np
 
-image = cv2.imread('caixa_grande.jpg')
+# image = cv2.imread('caixa_pequena.jpg')
+# image = cv2.imread('caixa_grande.jpg')
+image = cv2.imread('both_boxes.jpg')
 cv2.imshow('image', image)
 
+# Convert the image to grayscale
+gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+# Blur image to remove noise
+blur = cv2.GaussianBlur(gray, (5, 5), 0)
+
 #um valor de 30 permite distinguir a cor preta da caixa
-ret,th1 = cv2.threshold(image,30,255,cv2.THRESH_BINARY)
+ret,th1 = cv2.threshold(blur,30,255,cv2.THRESH_BINARY)
 cv2.imshow("binary", th1)
 
 #ao aplicar o gradiente obtemos o contorno da caixa
 ee = np.ones((3,3),np.uint8)
-gra = cv2.morphologyEx(th1, cv2.MORPH_GRADIENT, ee)
-cv2.imshow("Gradient", gra)
+gradient = cv2.morphologyEx(th1, cv2.MORPH_GRADIENT, ee)
+cv2.imshow("Gradient", gradient)
 
+# Find contours in the image
+contours, _ = cv2.findContours(gradient, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-height, width, _ = image.shape #obtem a altura e largura da imagem
+areas = []
+# Iterate over contours
+for contour in contours:
+    # Calculate the area of the contour
+    areas.append(cv2.contourArea(contour))
 
+print(f'Total area: {areas}')
+print(f'Area size vector: {len(areas)}')
+if(len(areas) > 1):
+    print("Error! More than one object identified!")
+else:
+    # check area value to identify box size
+    if(110000 <= areas[0] < 200000):
+        print("Caixa Pequena!")
 
-for y in range(height):
-    for x in range(width):
+    elif(areas[0] >= 200000):
+        print("Caixa grande!")
 
-        pixel_value = gra[y, x] # obtem o valor do pixel na posição x,y
-
-        # verifica os canais rgb se têm valores menores ou iguais a 10
-        if all(channel >= 10 for channel in pixel_value):
-            print("Pixel na posição (", x, ",", y, "):", pixel_value)
-
-# conta o nmr de pixeis brancos na imagem
-white_pixels = np.sum(gra == 255)
-print("Quantidade de pixeis brancos:", white_pixels)
-
-if(white_pixels > 9000):
-    print("Caixa grande!")
-elif(white_pixels < 9000):
-        print("Caixa pequena!")
+    else:
+        print("Error")
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
