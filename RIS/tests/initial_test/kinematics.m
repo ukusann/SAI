@@ -16,7 +16,7 @@ classdef kinematics < handle
         %*********************Direct Kinematics *************************
         function poseHand = directKinematics(obj, dh_alpha, dh_a, dh_d, dh_theta, theta)
             %* Compute individual transformation matrices
-            transf_w0 = obj.dhTransfMatrix(dh_alpha(1), dh_a(1), dh_d(1), dh_theta(1))
+            transf_w0 = obj.dhTransfMatrix(dh_alpha(1), dh_a(1), dh_d(1), dh_theta(1));
             transf_01 = obj.dhTransfMatrix(dh_alpha(2), dh_a(2), dh_d(2), dh_theta(2) + theta(1));
             transf_12 = obj.dhTransfMatrix(dh_alpha(3), dh_a(3), dh_d(3), dh_theta(3) + theta(2));
             transf_23 = obj.dhTransfMatrix(dh_alpha(4), dh_a(4), dh_d(4), dh_theta(4) + theta(3));
@@ -25,7 +25,7 @@ classdef kinematics < handle
             transf_56 = obj.dhTransfMatrix(dh_alpha(7), dh_a(7), dh_d(7), dh_theta(7) + theta(6));
             transf_67 = obj.dhTransfMatrix(dh_alpha(8), dh_a(8), dh_d(8), dh_theta(8) + theta(7));
             %* Compute general transformation matrix T_BE
-            transf_07 = transf_01 * transf_12 * transf_23 * transf_34 * transf_45 * transf_56 * transf_67;
+            transf_07 = transf_w0 * transf_01 * transf_12 * transf_23 * transf_34 * transf_45 * transf_56 * transf_67;
 
             %* Cartesian coordinates of Tip {7} with respect to base {0}
             xh_0=transf_07(1,4);
@@ -73,8 +73,18 @@ classdef kinematics < handle
             % Calculate desired Wrist Position from Hand Postion, Hand Link and  rotation in Z axis
             desWristPos = desHandPos - obj.Link(4)*z_vec_07; %todo: Wrist position
 
-            % Formalize Shoulder Position
-            desShoulderPos = [0, 0, obj.Link(1)]'; %todo: Shoulder position
+            %*Compute Shoulder Position
+            desShoulderPos_0S_h = [0, 0, obj.Link(1), 1]';
+            transf_w0 = [
+                        0 -1 0 0;
+                        1 0 0 0; 
+                        0 0 1 0.4725;
+                        0 0 0 1 
+                        ];
+            desShoulderPos_h = transf_w0*desShoulderPos_0S_h; 
+
+            desShoulderPos = desShoulderPos_h(1:3) %todo: Shoulder position
+            %*****
 
             %*Compute theta_4 Elbow Angle
             Lsw = norm(desWristPos - desShoulderPos);
@@ -97,18 +107,17 @@ classdef kinematics < handle
             %*****
 
             %*Compute elbow desired position from alpha value
-            sw_vec = desWristPos - desShoulderPos; % direction vectorfrom shoulder to wrist
+            sw = desWristPos - desShoulderPos; % direction vectorfrom shoulder to wrist
             
-            unit_sw_vec = sw_vec / Lsw; % unit vector from shoulder to wrist, ^sw_vec
-            u = [unit_sw_vec(2), -unit_sw_vec(1), 0]'; % n _|_ u
+            sw_vec = sw / Lsw; % unit vector from shoulder to wrist, ^sw
+            u = [sw_vec(2), -sw_vec(1), 0]'; % n _|_ u
             u_vec = u / norm(u);
             
-            v = cross(u_vec , unit_sw_vec); % v = n X u cross product
-            v_vec = v / norm(v);
+            v_vec = cross(u_vec , sw_vec); % v = n X u cross product
             
-            cosbeta = (Lsw^2 + obj.Link(2)^2 - obj.Link(3)^2) / (2*Lsw * obj.Link(2)); % co-sines law
+            cosbeta = (Lsw^2 + obj.Link(2)^2 - obj.Link(3)^2) / (2 * Lsw * obj.Link(2)); % co-sines law
             
-            C = desShoulderPos + cosbeta*obj.Link(2) * unit_sw_vec; % center of the circle described by the elbow
+            C = desShoulderPos + cosbeta*obj.Link(2) * sw_vec; % center of the circle described by the elbow
             
             R = sqrt(1 - cosbeta^2) * obj.Link(2); % radius of the circle described by the elbow
             
@@ -119,16 +128,16 @@ classdef kinematics < handle
             %*****
 
             %* Compute unit vectors of arm links
-            SE_unitVec = (desElbowPos - desShoulderPos) / obj.Link(2); % unit vector v_SE = (E - S) / norm(E - S)
-            EW_unitVec = (desWristPos - desElbowPos) / norm(desWristPos - desElbowPos); % unit vector v_EW = (WE) / norm(W - E)
-            SW_unit_vec = unit_sw_vec; % unit vector from Shoulder to wrist
-            CE_unit_vec = (desElbowPos - C) / norm(desElbowPos - C);
+            SE_vec = (desElbowPos - desShoulderPos) / obj.Link(2); % unit vector v_SE = (E - S) / norm(E - S)
+            EW_vec = (desWristPos - desElbowPos) / norm(desWristPos - desElbowPos); % unit vector v_EW = (WE) / norm(W - E)
+            SW_vec = sw_vec; % unit vector from Shoulder to wrist
+            CE_vec = (desElbowPos - C) / norm(desElbowPos - C);
             %*****
 
             %* Compute elbow's reference frame {4}
-            z_vec_04 = cross(SW_unit_vec, CE_unit_vec); % z4 = SW_vec X CE_vec cross product
-            y_vec_04 = EW_unitVec;
-            x_vec_04 = cross(y_vec_04, z_vec_04);
+            x_vec_04 = cross(SW_vec, CE_vec); % z4 = SW_vec X CE_vec cross product
+            y_vec_04 = EW_vec;
+            z_vec_04 = cross(y_vec_04, x_vec_04);
             %*****
 
             %* Compute theta1, theta2, theta3
@@ -157,30 +166,34 @@ classdef kinematics < handle
                 theta1_b = 0;
                 theta3_b = atan2(rotation_03(3,1), rotation_03(3,2));
                 solutionsNum = solutionsNum - 2; 
-            
+                if((theta3_b > obj.kuka_joint_lim_max(1, 3)) || (theta3_b < obj.kuka_joint_lim_min(1, 3)))
+                    disp(['---' newline 'Error in theta3!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    error = 1;
+                    return; 
+                end
             else
-                theta1_a = atan2(-rotation_03(3,3) / sin(theta2_a), -rotation_03(1,3) / sin(theta2_a)); %todo: theta1 sol1
-                theta3_a = atan2( rotation_03(2,2) / sin(theta2_a),  rotation_03(2,1) / sin(theta2_a)); %todo: theta3 sol1          
+                theta1_a = atan2((-rotation_03(3,3) / sin(theta2_a)), (-rotation_03(1,3) / sin(theta2_a))); %todo: theta1 sol1
+                theta3_a = atan2(( rotation_03(2,2) / sin(theta2_a)), ( rotation_03(2,1) / sin(theta2_a))); %todo: theta3 sol1          
             
             
-                theta1_b = atan2(-rotation_03(3,3) / sin(theta2_b), -rotation_03(1,3) / sin(theta2_b)); %todo: theta1 sol2
-                theta3_b = atan2( rotation_03(2,2) / sin(theta2_b),  rotation_03(2,1) / sin(theta2_b)); %todo: theta3 sol2
-            end
-            
-            if((theta2_a > obj.kuka_joint_lim_max(1, 2)) || (theta2_b < obj.kuka_joint_lim_min(1, 2)))
-                disp(['---' newline 'Error in theta2!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
-                error = 1;
-                return;  
+                theta1_b = atan2((-rotation_03(3,3) / sin(theta2_b)), (-rotation_03(1,3) / sin(theta2_b))); %todo: theta1 sol2
+                theta3_b = atan2(( rotation_03(2,2) / sin(theta2_b)), ( rotation_03(2,1) / sin(theta2_b))); %todo: theta3 sol2
                 
-            elseif((theta1_a > obj.kuka_joint_lim_max(1, 1)) || (theta1_a < obj.kuka_joint_lim_min(1, 1)) || (theta1_b > obj.kuka_joint_lim_max(1, 1)) || (theta1_b < obj.kuka_joint_lim_min(1, 1)))
-                disp(['---' newline 'Error in theta1!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
-                error = 1;
-                return; 
-                
-            elseif((theta3_a > obj.kuka_joint_lim_max(1, 3)) || (theta3_a < obj.kuka_joint_lim_min(1, 3)) || (theta3_b > obj.kuka_joint_lim_max(1, 3)) || (theta3_b < obj.kuka_joint_lim_min(1, 3)))
-                disp(['---' newline 'Error in theta3!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
-                error = 1;
-                return; 
+                if((theta2_a > obj.kuka_joint_lim_max(1, 2)) || (theta2_b < obj.kuka_joint_lim_min(1, 2)))
+                    disp(['---' newline 'Error in theta2!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    error = 1;
+                    return;  
+                    
+                elseif((theta1_a > obj.kuka_joint_lim_max(1, 1)) || (theta1_a < obj.kuka_joint_lim_min(1, 1)) || (theta1_b > obj.kuka_joint_lim_max(1, 1)) || (theta1_b < obj.kuka_joint_lim_min(1, 1)))
+                    disp(['---' newline 'Error in theta1!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    error = 1;
+                    return; 
+                    
+                elseif((theta3_a > obj.kuka_joint_lim_max(1, 3)) || (theta3_a < obj.kuka_joint_lim_min(1, 3)) || (theta3_b > obj.kuka_joint_lim_max(1, 3)) || (theta3_b < obj.kuka_joint_lim_min(1, 3)))
+                    disp(['---' newline 'Error in theta3!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    error = 1;
+                    return; 
+                end
             end
             %*****
 
@@ -203,28 +216,33 @@ classdef kinematics < handle
                 theta5_b = 0;
                 theta7_b = atan2(rotation_47(1,2), rotation_47(3,2));
                 solutionsNum = solutionsNum - 2;
+                if((theta7_b > obj.kuka_joint_lim_max(1, 7)) || (theta7_b < obj.kuka_joint_lim_min(1, 7)))
+                    disp(['---' newline 'Error in theta7!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    error = 1;
+                    return; 
+                end
             else
-                theta5_a = atan2( rotation_47(3,3) / sin(theta6_a), -rotation_47(1,3) / sin(theta6_a)); %todo: theta5 sol1
-                theta7_a = atan2(-rotation_47(2,2) / sin(theta6_a),  rotation_47(2,1) / sin(theta6_a)); %todo: theta7 sol1
+                theta5_a = atan2(( rotation_47(3,3) / sin(theta6_a)), (-rotation_47(1,3) / sin(theta6_a))); %todo: theta5 sol1
+                theta7_a = atan2((-rotation_47(2,2) / sin(theta6_a)), ( rotation_47(2,1) / sin(theta6_a))); %todo: theta7 sol1
 
-                theta5_b = atan2( rotation_47(3,3) / sin(theta6_b), -rotation_47(1,3) / sin(theta6_b)); %todo: theta5 sol2
-                theta7_b = atan2(-rotation_47(2,2) / sin(theta6_b),  rotation_47(2,1) / sin(theta6_b)); %todo: theta7 sol2
-            end
-
-            if((theta6_a > obj.kuka_joint_lim_max(1, 6)) || (theta6_b < obj.kuka_joint_lim_min(1, 6)))
-                disp(['---' newline 'Error in theta6!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
-                error = 1;
-                return;  
+                theta5_b = atan2(( rotation_47(3,3) / sin(theta6_b)), (-rotation_47(1,3) / sin(theta6_b))); %todo: theta5 sol2
+                theta7_b = atan2((-rotation_47(2,2) / sin(theta6_b)), ( rotation_47(2,1) / sin(theta6_b))); %todo: theta7 sol2
                 
-            elseif((theta5_a > obj.kuka_joint_lim_max(1, 5)) || (theta5_a < obj.kuka_joint_lim_min(1, 5)) || (theta5_b > obj.kuka_joint_lim_max(1, 5)) || (theta5_b < obj.kuka_joint_lim_min(1, 5)))
-                disp(['---' newline 'Error in theta5!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
-                error = 1;
-                return; 
+                if((theta6_a > obj.kuka_joint_lim_max(1, 6)) || (theta6_b < obj.kuka_joint_lim_min(1, 6)))
+                    disp(['---' newline 'Error in theta6!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    error = 1;
+                    return;  
                 
-            elseif((theta7_a > obj.kuka_joint_lim_max(1, 7)) || (theta7_a < obj.kuka_joint_lim_min(1, 7)) || (theta7_b > obj.kuka_joint_lim_max(1, 7)) || (theta7_b < obj.kuka_joint_lim_min(1, 7)))
-                disp(['---' newline 'Error in theta7!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
-                error = 1;
-                return; 
+                elseif((theta5_a > obj.kuka_joint_lim_max(1, 5)) || (theta5_a < obj.kuka_joint_lim_min(1, 5)) || (theta5_b > obj.kuka_joint_lim_max(1, 5)) || (theta5_b < obj.kuka_joint_lim_min(1, 5)))
+                    disp(['---' newline 'Error in theta5!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    error = 1;
+                    return; 
+                    
+                elseif((theta7_a > obj.kuka_joint_lim_max(1, 7)) || (theta7_a < obj.kuka_joint_lim_min(1, 7)) || (theta7_b > obj.kuka_joint_lim_max(1, 7)) || (theta7_b < obj.kuka_joint_lim_min(1, 7)))
+                    disp(['---' newline 'Error in theta7!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    error = 1;
+                    return; 
+                end
             end
 
             if(solutionsNum == 4)

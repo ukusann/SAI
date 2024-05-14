@@ -125,40 +125,42 @@ dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
 
 dh_alpha_w = 0;
 dh_a_w = 0;
-dh_d_w = 0;
+dh_d_w = 0.4725;
 dh_theta_w = pi/180*90;
 
 %*Creation of kinematics class
 kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 
 
-%************** Direct Kinematics ******************
-% poseHand = kuka_kinematics.directKinematics([dh_alpha_w; dh_alpha], [dh_a_w; dh_a], [dh_d_w; dh_d], [dh_theta_w; dh_theta], theta);
-%****************************************************
 
 
 %************** Inverse Kinematics ******************
-alpha = -25*pi/180;
-desPoseHand = [-0.55, 0.2, 1, 0, 0, 90]';
-tmp = [0.2, -0.55, 0.9, 0, 0, 90]';
+alpha = -50*pi/180;
+desPoseHand = [0.2, -0.4, 0.2, 0, 0, 0]';
+tmp = [0.2, 0.4, 0.9, 0, 0, 0]';
 posHand_h = [desPoseHand(1:3); 1];
 transf_w0 = [
-            0 -1 0 0;
-            1 0 0 0; 
-            0 0 1 0;
-            0 0 0 1 
-            ];
-
-posHand_ref0_h = transf_w0 * posHand_h; 
-desPoseHand_ref0 = [posHand_ref0_h(1:3); desPoseHand(4:6)];
+    0 -1 0 0;
+    1 0 0 0; 
+    0 0 1 0.4725;
+    0 0 0 1 
+    ];
+    
+    posHand_ref0_h = transf_w0 * posHand_h; 
+    desPoseHand_ref0 = [posHand_ref0_h(1:3); desPoseHand(4:6)];
 [error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, tmp);
 if(error == 1)
     sim.terminate();
     return;
 end
+disp(['Inverse Kinematics Number of Solutions: ', num2str(solutionsNum)])
+robot_arm.set_joints(joingAnglesSol4);
 
-robot_arm.set_joints(joingAnglesSol1);
-
+%************** Direct Kinematics ******************
+% poseHand = kuka_kinematics.directKinematics([dh_alpha_w; dh_alpha], [dh_a_w; dh_a], [dh_d_w; dh_d], [dh_theta_w; dh_theta], theta)
+dir_flag = 1;
+delay_dir = 0;
+%****************************************************
 
 %****************************************************
 
@@ -170,8 +172,8 @@ while stop==0
     % avoid do processing in between ensure_all_data and trigger_simulation
     sim.ensure_all_data();
 
-    % ReadArmJoints - get joint value (rad) for arm
-    [error,ReadArmJoints] = robot_arm.get_joints();
+    % theta - get joint value (rad) for arm
+    [error,theta] = robot_arm.get_joints();
     if error == 1
         sim.terminate();
         return;
@@ -249,8 +251,15 @@ while stop==0
     sim.trigger_simulation();
     %----------------------------------------------------------------------
     % --- YOUR CODE --- %
-
     %Direct Kinematics calculation
+    if(dir_flag == 1)
+        delay_dir = delay_dir + toc(start);
+        if(delay_dir > 10)
+            poseHand = kuka_kinematics.directKinematics([dh_alpha_w; dh_alpha], [dh_a_w; dh_a], [dh_d_w; dh_d], [dh_theta_w; dh_theta], theta)
+            delay_dir = 0;
+            dir_flag = 0;
+        end
+    end
     %Inverse Kinematics - Send values for joints
     %Write joints.
     %armJoints(1)=0*pi/180;
