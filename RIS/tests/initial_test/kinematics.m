@@ -172,6 +172,14 @@ classdef kinematics < handle
             
             rotation_03 = rotation_04 * rotation_34';
             
+            % 
+            % transf03 =
+            % [cos(theta1)*cos(theta2)*cos(theta3) - sin(theta1)*sin(theta3), - cos(theta3)*sin(theta1) - cos(theta1)*cos(theta2)*sin(theta3), cos(theta1)*sin(theta2), L2*cos(theta1)*sin(theta2)]
+            % [cos(theta1)*sin(theta3) + cos(theta2)*cos(theta3)*sin(theta1),   cos(theta1)*cos(theta3) - cos(theta2)*sin(theta1)*sin(theta3), sin(theta1)*sin(theta2), L2*sin(theta1)*sin(theta2)]
+            % [                                     -cos(theta3)*sin(theta2),                                         sin(theta2)*sin(theta3),             cos(theta2),        L1 + L2*cos(theta2)]
+            % [                                                            0,                                                               0,                       0,                          1]
+            %
+        
             theta2 = atan2(sqrt(1 - rotation_03(3,3)^2), rotation_03(3,3)); %todo: theta2 sol
             % Put solution 2 always negative
             if(theta2 <= 0)
@@ -222,6 +230,12 @@ classdef kinematics < handle
             %* Compute theta5, theta6, theta7
             rotation_47 = rotation_04' * rotation_07;
 
+            % transf47 =
+            % [  cos(theta5)*cos(theta6)*cos(theta7) - sin(theta5)*sin(theta7), - cos(theta7)*sin(theta5) - cos(theta5)*cos(theta6)*sin(theta7),  cos(theta5)*sin(theta6),  L4*cos(theta5)*sin(theta6)]
+            % [                                       -cos(theta7)*sin(theta6),                                         sin(theta6)*sin(theta7),              cos(theta6),         L3 + L4*cos(theta6)]
+            % [- cos(theta5)*sin(theta7) - cos(theta6)*cos(theta7)*sin(theta5),   cos(theta6)*sin(theta5)*sin(theta7) - cos(theta5)*cos(theta7), -sin(theta5)*sin(theta6), -L4*sin(theta5)*sin(theta6)]
+            % [                                                              0,                                                               0,                        0,                           1]
+ 
             theta6 = atan2(sqrt(1 - rotation_47(2,3)^2), rotation_47(2,3)); %todo: theta6 sol1
             % Put solution 2 always negative
             if(theta6 <= 0)
