@@ -123,44 +123,58 @@ dh_a = [0, 0, 0, 0, 0, 0, 0]';
 dh_d = [Links(1), 0, Links(2), 0, Links(3), 0, Links(4)]';
 dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
 
-dh_alpha_w = 0;
-dh_a_w = 0;
-dh_d_w = 0.4725;
-dh_theta_w = pi/180*90;
+%*Get symbolic matrices
+% syms L1 L2 L3 L4
+% syms theta1 theta2 theta3 theta4 theta5 theta6 theta7
+% symb_links = [L1, L2, L3, L4]; 
+% symb_transf01 = symbolicCalcTransf(0, dh_a(1), symb_links(1), theta1);
+% symb_transf12 = symbolicCalcTransf(sym(-pi)/2, dh_a(2), 0, theta2);
+% symb_transf23 = symbolicCalcTransf(sym(pi)/2, dh_a(3), symb_links(2), theta3);
+% symb_transf34 = symbolicCalcTransf(sym(pi)/2, dh_a(4), 0, theta4);
+% symb_transf45 = symbolicCalcTransf(sym(-pi)/2, dh_a(5), symb_links(3), theta5);
+% symb_transf56 = symbolicCalcTransf(sym(-pi)/2, dh_a(6), 0, theta6);
+% symb_transf67 = symbolicCalcTransf(sym(pi)/2, dh_a(7), symb_links(4), theta7);
+
+% symb_transf03 = symb_transf01*symb_transf12*symb_transf23
+% symb_transf47 = symb_transf45*symb_transf56*symb_transf67
 
 %*Creation of kinematics class
 kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 
+armJoints(1) = 0*pi/180;
+armJoints(2) =-0*pi/180;
+armJoints(3) =-0*pi/180;
+armJoints(4) = 10*pi/180; % theta4 needs to be positive always
+armJoints(5) = 0*pi/180;
+armJoints(6) = 0*pi/180;
+armJoints(7) = 0*pi/180;
+disp('Armjoints to be send to arm:')
+armJoints'
+% error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
+% if error == 1
+%     sim.terminate();
+%     return;
+% end
 
+%************** Direct Kinematics ******************
+poseHand = kuka_kinematics.directKinematics(dh_alpha, dh_a, dh_d, dh_theta, armJoints);
+% poseHand = [0, 0, 0, 0, 0, 0]';
+dir_flag = 2;
+delay_dir = 0;
+%****************************************************
 
 
 %************** Inverse Kinematics ******************
-alpha = -50*pi/180;
-desPoseHand = [0.2, -0.4, 0.2, 0, 0, 0]';
-tmp = [0.2, 0.4, 0.9, 0, 0, 0]';
-posHand_h = [desPoseHand(1:3); 1];
-transf_w0 = [
-    0 -1 0 0;
-    1 0 0 0; 
-    0 0 1 0.4725;
-    0 0 0 1 
-    ];
-    
-    posHand_ref0_h = transf_w0 * posHand_h; 
-    desPoseHand_ref0 = [posHand_ref0_h(1:3); desPoseHand(4:6)];
-[error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, tmp);
+alpha = 0*pi/180;
+
+[error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand)
 if(error == 1)
     sim.terminate();
     return;
 end
-disp(['Inverse Kinematics Number of Solutions: ', num2str(solutionsNum)])
-robot_arm.set_joints(joingAnglesSol4);
+% disp(['Inverse Kinematics Number of Solutions: ', num2str(solutionsNum)])
+% robot_arm.set_joints(joingAnglesSol4);
 
-%************** Direct Kinematics ******************
-% poseHand = kuka_kinematics.directKinematics([dh_alpha_w; dh_alpha], [dh_a_w; dh_a], [dh_d_w; dh_d], [dh_theta_w; dh_theta], theta)
-dir_flag = 1;
-delay_dir = 0;
-%****************************************************
 
 %****************************************************
 
@@ -254,11 +268,19 @@ while stop==0
     %Direct Kinematics calculation
     if(dir_flag == 1)
         delay_dir = delay_dir + toc(start);
-        if(delay_dir > 10)
-            poseHand = kuka_kinematics.directKinematics([dh_alpha_w; dh_alpha], [dh_a_w; dh_a], [dh_d_w; dh_d], [dh_theta_w; dh_theta], theta)
+        if(delay_dir > 5)
+            poseHand = kuka_kinematics.directKinematics(dh_alpha, dh_a, dh_d, dh_theta, theta);
             delay_dir = 0;
             dir_flag = 0;
         end
+    elseif(dir_flag == 0)
+        [error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand)
+        if(error == 1)
+            sim.terminate();
+            return;
+        end
+        dir_flag = 2;
+        % disp(['Inverse Kinematics Number of Solutions: ', num2str(solutionsNum)]);
     end
     %Inverse Kinematics - Send values for joints
     %Write joints.
