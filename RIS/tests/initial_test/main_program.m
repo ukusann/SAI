@@ -135,26 +135,35 @@ dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
 % symb_transf56 = symbolicCalcTransf(sym(-pi)/2, dh_a(6), 0, theta6);
 % symb_transf67 = symbolicCalcTransf(sym(pi)/2, dh_a(7), symb_links(4), theta7);
 
+% symb_transf07 = symb_transf01 * symb_transf12 * symb_transf23 * symb_transf34 * symb_transf45 * symb_transf56 * symb_transf67;
+% symb_handPos = symb_transf07(1:3, 4)
 % symb_transf03 = symb_transf01*symb_transf12*symb_transf23
 % symb_transf47 = symb_transf45*symb_transf56*symb_transf67
 
 %*Creation of kinematics class
 kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 
-armJoints(1) = 0*pi/180;
-armJoints(2) =-0*pi/180;
-armJoints(3) =-0*pi/180;
-armJoints(4) = 10*pi/180; % theta4 needs to be positive always
-armJoints(5) = 0*pi/180;
-armJoints(6) = 0*pi/180;
-armJoints(7) = 0*pi/180;
+% armJoints(1) =60*pi/180;
+% armJoints(2) =-60*pi/180;
+% armJoints(3) =60*pi/180;
+% armJoints(4) =60*pi/180; % theta4 needs to be positive always
+% armJoints(5) =60*pi/180;
+% armJoints(6) =60*pi/180;
+% armJoints(7) =-60*pi/180;
+armJoints(1) =-40*pi/180;
+armJoints(2) = 40*pi/180;
+armJoints(3) = 40*pi/180;
+armJoints(4) = 40*pi/180; % theta4 needs to be positive always
+armJoints(5) =-40*pi/180;
+armJoints(6) = 40*pi/180;
+armJoints(7) = 40*pi/180;
 disp('Armjoints to be send to arm:')
 armJoints'
-% error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
-% if error == 1
-%     sim.terminate();
-%     return;
-% end
+error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
+if error == 1
+    sim.terminate();
+    return;
+end
 
 %************** Direct Kinematics ******************
 poseHand = kuka_kinematics.directKinematics(dh_alpha, dh_a, dh_d, dh_theta, armJoints);
@@ -165,7 +174,7 @@ delay_dir = 0;
 
 
 %************** Inverse Kinematics ******************
-alpha = 0*pi/180;
+alpha = 45*pi/180;
 
 [error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand)
 if(error == 1)
@@ -173,7 +182,7 @@ if(error == 1)
     return;
 end
 % disp(['Inverse Kinematics Number of Solutions: ', num2str(solutionsNum)])
-% robot_arm.set_joints(joingAnglesSol4);
+robot_arm.set_joints(joingAnglesSol3);
 
 
 %****************************************************
