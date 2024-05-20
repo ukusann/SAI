@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 
 # image = cv2.imread('caixa_pequena.jpg')
-image = cv2.imread('caixa_grande.jpg')
+# image = cv2.imread('caixa_grande.jpg')
 # image = cv2.imread('both_boxes.jpg')
 # image = cv2.imread('half_big_box.jpg')
 image = cv2.imread('bigBoxcut.jpg')
