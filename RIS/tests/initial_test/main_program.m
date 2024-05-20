@@ -143,26 +143,44 @@ dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
 %*Creation of kinematics class
 kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 
-armJoints(1) =60*pi/180;
-armJoints(2) =-60*pi/180;
-armJoints(3) =60*pi/180;
-armJoints(4) =60*pi/180; % theta4 needs to be positive always
-armJoints(5) =60*pi/180;
-armJoints(6) =60*pi/180;
-armJoints(7) =-60*pi/180;
+% armJoints(1) =60*pi/180;
+% armJoints(2) =-60*pi/180;
+% armJoints(3) =60*pi/180;
+% armJoints(4) =60*pi/180; % theta4 needs to be positive always
+% armJoints(5) =60*pi/180;
+% armJoints(6) =60*pi/180;
+% armJoints(7) =-60*pi/180;
 
-disp('Armjoints to be send to arm:')
-armJoints'
-error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
-if error == 1
-    sim.terminate();
-    return;
-end
+% disp('Armjoints to be send to arm:')
+% armJoints'
+% error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
+% if error == 1
+%     sim.terminate();
+%     return;
+% end
 
 %************** Direct Kinematics ******************
-poseHand = kuka_kinematics.directKinematics(dh_alpha, dh_a, dh_d, dh_theta, armJoints);
-% poseHand = [0, 0, 0, 0, 0, 0]';
-dir_flag = 2;
+% poseHand = kuka_kinematics.directKinematics(dh_alpha, dh_a, dh_d, dh_theta, armJoints);
+% poseHand = [-0.1304, -0.7786, 0.4767, -123.6901, -51.7055, 166.1021]';
+transf_w0 = [
+            0      -1       0         0.00005;
+            1       0      -0.01067  -0.00726; 
+            0.01067 0       1         0.680;
+            0       0       0         1 
+            ];
+rotation_w0 = transf_w0(1:3, 1:3);
+orig_w0     = transf_w0(1:3, 4);
+rotation_0w = rotation_w0';
+orig_0w     = -rotation_0w*orig_w0;
+transf_0w   = [rotation_0w, orig_0w; zeros(1, 3), 1];
+handPos_w = [-0.62, 0.01, 0.9]';
+handPos_w_h = [handPos_w; 1];
+handPos_h = transf_0w*handPos_w_h;
+rpy_des_deg = [-90, -90, 0];
+rpy_des = rpy_des_deg*pi/180;
+poseHand = [handPos_h(1:3); rpy_des']; 
+% poseHand = [handPos_h(1:3); 0.1744; -0.222; -0.333] 
+dir_flag = 1;
 delay_dir = 0;
 %****************************************************
 
@@ -170,13 +188,13 @@ delay_dir = 0;
 %************** Inverse Kinematics ******************
 alpha = 45*pi/180;
 
-[error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand)
-if(error == 1)
-    sim.terminate();
-    return;
-end
+% [error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand);
+% if(error == 1)
+%     sim.terminate();
+%     return;
+% end
 % disp(['Inverse Kinematics Number of Solutions: ', num2str(solutionsNum)])
-robot_arm.set_joints(joingAnglesSol1);
+% robot_arm.set_joints(joingAnglesSol1);
 
 
 %****************************************************
@@ -272,17 +290,25 @@ while stop==0
     if(dir_flag == 1)
         delay_dir = delay_dir + toc(start);
         if(delay_dir > 5)
-            poseHand = kuka_kinematics.directKinematics(dh_alpha, dh_a, dh_d, dh_theta, theta);
+            % poseHand = kuka_kinematics.directKinematics(dh_alpha, dh_a, dh_d, dh_theta, theta);
             delay_dir = 0;
             dir_flag = 0;
         end
     elseif(dir_flag == 0)
-        [error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand)
-        if(error == 1)
-            sim.terminate();
-            return;
+        mushroomCanPos(1, 1:3)
+        if(mushroomCanPos(1,1) > -0.7805)
+            mushroomCanPos(1, 1) = mushroomCanPos(1, 1) + DistanceHand;
+            mushCan_h = [mushroomCanPos(1, 1:3)'; 1]
+            handDes = transf_0w*mushCan_h;
+            poseHand = [handDes(1:3); rpy_des']
+            [error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand)
+            if(error == 1)
+                sim.terminate();
+                return;
+            end
+            robot_arm.set_joints(joingAnglesSol4);
+            dir_flag = 2;
         end
-        dir_flag = 2;
         % disp(['Inverse Kinematics Number of Solutions: ', num2str(solutionsNum)]);
     end
     %Inverse Kinematics - Send values for joints

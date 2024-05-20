@@ -61,11 +61,11 @@ classdef kinematics < handle
             %angles:
             rotation_07 = obj.transf_07(1:3,1:3); 
             [yaw_x, pitch_y, roll_z] = obj.computeMatrixToRPY(rotation_07);
-            handOrientationDeg = [yaw_x, pitch_y, roll_z]'*180/pi;
+            handOrientation = [yaw_x, pitch_y, roll_z]';
 
             %* Conclusion of Direct kinematics
             % Tip pose:
-            poseHand = [ph_0; handOrientationDeg];
+            poseHand = [ph_0; handOrientation];
         end
         %*****************************************************************
 
@@ -79,28 +79,28 @@ classdef kinematics < handle
             solutionsNum = 4; 
             % Get hand position and RPY from PoseHand desired
             desHandPos = desPoseHand(1:3); %todo: Hand position
-            yaw_x   = desPoseHand(4)*pi/180;
-            pitch_y = desPoseHand(5)*pi/180;
-            roll_z  = desPoseHand(6)*pi/180;
+            yaw_x   = desPoseHand(6);
+            pitch_y = desPoseHand(5);
+            roll_z  = desPoseHand(4);
 
             % desHandPos = obj.transf_07(1:3, 4);
 
             % Create the rotation matrix from RPY 
-            rotation_07 = obj.RPYTransfMatrix(yaw_x, pitch_y, roll_z);
+            rotation_07 = obj.RPYTransfMatrix(yaw_x, pitch_y, roll_z)
             % rotation_07_2 = obj.transf_07(1:3,1:3) 
             
             % Get transfromation from Base {0} to Hand {7} with rotation matrix and hand position 
-            % transf_07 = [rotation_07, desHandPos; zeros(1, 3), 1];
+            desTransf_07 = [rotation_07, desHandPos; zeros(1, 3), 1];
 
             % Get the z_07 vector
-            z_vec_07 = obj.transf_07(1:3, 3);
+            z_vec_07 = desTransf_07(1:3, 3);
 
             % Calculate desired Wrist Position from Hand Postion, Hand Link and  rotation in Z axis
             desWristPos = desHandPos - obj.Link(4)*z_vec_07; %todo: Wrist position
 
             %*Compute Shoulder Position
-            % desShoulderPos = [0, 0, obj.Link(1)]';  %todo: Shoulder position
-            desShoulderPos = obj.transf_01(1:3, 4);
+            desShoulderPos = [0, 0, obj.Link(1)]';  %todo: Shoulder position
+            % desShoulderPos = obj.transf_01(1:3, 4);
 
             %*****
 
