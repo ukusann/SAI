@@ -143,20 +143,14 @@ dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
 %*Creation of kinematics class
 kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 
-% armJoints(1) =60*pi/180;
-% armJoints(2) =-60*pi/180;
-% armJoints(3) =60*pi/180;
-% armJoints(4) =60*pi/180; % theta4 needs to be positive always
-% armJoints(5) =60*pi/180;
-% armJoints(6) =60*pi/180;
-% armJoints(7) =-60*pi/180;
-armJoints(1) =-40*pi/180;
-armJoints(2) = 40*pi/180;
-armJoints(3) = 40*pi/180;
-armJoints(4) = 40*pi/180; % theta4 needs to be positive always
-armJoints(5) =-40*pi/180;
-armJoints(6) = 40*pi/180;
-armJoints(7) = 40*pi/180;
+armJoints(1) =60*pi/180;
+armJoints(2) =-60*pi/180;
+armJoints(3) =60*pi/180;
+armJoints(4) =60*pi/180; % theta4 needs to be positive always
+armJoints(5) =60*pi/180;
+armJoints(6) =60*pi/180;
+armJoints(7) =-60*pi/180;
+
 disp('Armjoints to be send to arm:')
 armJoints'
 error = robot_arm.set_joints(armJoints); %send value for arm Joints in rad
@@ -182,7 +176,7 @@ if(error == 1)
     return;
 end
 % disp(['Inverse Kinematics Number of Solutions: ', num2str(solutionsNum)])
-robot_arm.set_joints(joingAnglesSol3);
+robot_arm.set_joints(joingAnglesSol1);
 
 
 %****************************************************
