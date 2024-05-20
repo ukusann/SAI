@@ -306,7 +306,7 @@ while stop==0
                 sim.terminate();
                 return;
             end
-            robot_arm.set_joints(joingAnglesSol4);
+            robot_arm.set_joints(joingAnglesSol2);
             dir_flag = 2;
         end
         % disp(['Inverse Kinematics Number of Solutions: ', num2str(solutionsNum)]);
