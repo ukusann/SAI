@@ -182,7 +182,7 @@ classdef arm_interface < handle
             end
 
             if strcmp(obj.hand_name,'RG2')==1
-                DistanceHand = 0.132+0.018;
+                DistanceHand = 0.132+0.025;
                 %ponta dos dedos aberto 0.174
                 %ponta dos dedos fechados 0.213
             elseif strcmp(obj.hand_name,'BarrettHand')==1
