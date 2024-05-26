@@ -1,4 +1,8 @@
-% Functions and algorithms for direct and inverse kinematics of robotic manipulator
+%   kinematics.m
+%   Interface for direct and inverse kinematics of robotic manipulator
+%   2024/05/04
+%   % Copyright (C) 2024
+%   Author: Matheus Costa, pg50649@alunos.uminho.pt
 
 classdef kinematics < handle
     properties
@@ -86,7 +90,7 @@ classdef kinematics < handle
             % desHandPos = obj.transf_07(1:3, 4);
 
             % Create the rotation matrix from RPY 
-            rotation_07 = obj.RPYTransfMatrix(yaw_x, pitch_y, roll_z)
+            rotation_07 = obj.RPYTransfMatrix(yaw_x, pitch_y, roll_z);
             % rotation_07_2 = obj.transf_07(1:3,1:3) 
             
             % Get transfromation from Base {0} to Hand {7} with rotation matrix and hand position 
@@ -301,6 +305,20 @@ classdef kinematics < handle
             end
         end
         %*****************************************************************
+
+        %*******************Choose InvKin Solution ***********************
+        function optimalSolution = chooseInvKinSolution(obj, jointAngles)
+            optimalSolution = jointAngles(1, :)
+            min = obj.maxDiffAngles(optimalSolution);
+            for i = 2:size(jointAngles, 1)
+                solution = jointAngles(i, :);
+                tmpMin = obj.maxDiffAngles(solution);
+                if(abs(tmpMin) < abs(min))
+                    min = tmpMin;
+                    optimalSolution = solution;
+                end
+            end
+        end
     end
 
 
@@ -353,6 +371,18 @@ classdef kinematics < handle
                     sin(roll_z)*cos(pitch_y)     cos(roll_z)*cos(yaw_x)+sin(roll_z)*sin(pitch_y)*sin(yaw_x)     -cos(roll_z)*sin(yaw_x)+sin(roll_z)*sin(pitch_y)*cos(yaw_x);
                    -sin(pitch_y)                 cos(pitch_y)*sin(yaw_x)                                         cos(pitch_y)*cos(yaw_x)
                     ];
+        end 
+
+        function maxDiff = maxDiffAngles(~, angles)
+            maxDiff = 0;
+            for i = 2:size(angles, 2)
+                diff = angles(1, i) - angles(1, i-1); 
+                if(maxDiff == 0)
+                    maxDiff = diff;
+                elseif(diff < maxDiff)
+                    maxDiff = diff;
+                end
+            end
         end 
     end
 end
