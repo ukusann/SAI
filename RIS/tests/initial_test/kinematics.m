@@ -308,7 +308,7 @@ classdef kinematics < handle
 
         %*******************Choose InvKin Solution ***********************
         function optimalSolution = chooseInvKinSolution(obj, jointAngles)
-            optimalSolution = jointAngles(1, :)
+            optimalSolution = jointAngles(1, :);
             min = obj.maxDiffAngles(optimalSolution);
             for i = 2:size(jointAngles, 1)
                 solution = jointAngles(i, :);
