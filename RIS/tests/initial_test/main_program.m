@@ -162,25 +162,11 @@ kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 %************** Direct Kinematics ******************
 % poseHand = kuka_kinematics.directKinematics(dh_alpha, dh_a, dh_d, dh_theta, armJoints);
 % poseHand = [-0.1304, -0.7786, 0.4767, -123.6901, -51.7055, 166.1021]';
-transf_w0 = [
-            0      -1       0         0.00005;
-            1       0      -0.01067  -0.00726; 
-            0.01067 0       1         0.680;
-            0       0       0         1 
-            ];
-rotation_w0 = transf_w0(1:3, 1:3);
-orig_w0     = transf_w0(1:3, 4);
-rotation_0w = rotation_w0';
-orig_0w     = -rotation_0w*orig_w0;
-transf_0w   = [rotation_0w, orig_0w; zeros(1, 3), 1];
-handPos_w = [-0.62, 0.01, 0.9]';
-handPos_w_h = [handPos_w; 1];
-handPos_h = transf_0w*handPos_w_h;
-rpy_des_deg = [-90, -90, 0];
-rpy_des = rpy_des_deg*pi/180;
-poseHand = [handPos_h(1:3); rpy_des']; 
+% rpy_des = rpy_des_deg*pi/180;
+% poseHand = [handPos_h(1:3); rpy_des']; 
 % poseHand = [handPos_h(1:3); 0.1744; -0.222; -0.333] 
-dir_flag = 1;
+rpy_des_deg = [0, -90, -90];
+dir_flag = 0;
 delay_dir = 0;
 %****************************************************
 
@@ -287,29 +273,33 @@ while stop==0
     %----------------------------------------------------------------------
     % --- YOUR CODE --- %
     %Direct Kinematics calculation
-    if(dir_flag == 1)
-        delay_dir = delay_dir + toc(start);
-        if(delay_dir > 5)
-            % poseHand = kuka_kinematics.directKinematics(dh_alpha, dh_a, dh_d, dh_theta, theta);
-            delay_dir = 0;
-            dir_flag = 0;
-        end
-    elseif(dir_flag == 0)
+    if(dir_flag == 0)
         mushroomCanPos(1, 1:3)
-        if(mushroomCanPos(1,1) > -0.7805)
-            mushroomCanPos(1, 1) = mushroomCanPos(1, 1) + DistanceHand;
-            mushCan_h = [mushroomCanPos(1, 1:3)'; 1]
-            handDes = transf_0w*mushCan_h;
-            poseHand = [handDes(1:3); rpy_des']
-            [error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand)
+        conveyor_dist = 1;
+        if(mushroomCanPos(1,1) > -conveyor_dist)
+            mushroomCanPos(1, 1) = mushroomCanPos(1, 1) + DistanceHand + (conveyor_dist - 0.77);
+            poseHand = refWorldToBase(mushroomCanPos(1, 1:3)', rpy_des_deg');
+            [error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand);
             if(error == 1)
                 sim.terminate();
                 return;
             end
-            robot_arm.set_joints(joingAnglesSol2);
+            optimalSolution = kuka_kinematics.chooseInvKinSolution([joingAnglesSol1'; joingAnglesSol2'; joingAnglesSol3'; joingAnglesSol4']);
+            % robot_arm.set_joints(joingAnglesSol4);
+            robot_arm.set_joints(optimalSolution');
+            dir_flag = 1;
+        end
+    elseif(dir_flag == 1)
+        delay_dir = delay_dir + toc(start);
+        if(delay_dir > 5)
+            error = robot_arm.close_hand();    %close
+            if error == 1
+               sim.terminate();
+               return;
+            end
+            delay_dir = 0;
             dir_flag = 2;
         end
-        % disp(['Inverse Kinematics Number of Solutions: ', num2str(solutionsNum)]);
     end
     %Inverse Kinematics - Send values for joints
     %Write joints.
