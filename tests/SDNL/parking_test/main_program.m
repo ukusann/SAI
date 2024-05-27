@@ -139,13 +139,13 @@ start = tic;
 
 %*==================================================
 %*=================Parameters=======================
-vrobot_des  = 100;
-lambdaTarget = 2.3;
-lambda_v = 5;
-stop_time = 4;
-vinit = 50;
-min_d_limit = 150;
-max_d_limit = 300;
+vrobot_des  = 100;      
+lambdaTarget = 2.3;     
+lambda_v = 5;           
+stop_time = 4;          
+vinit = 50;             
+min_d_limit = 150;      
+max_d_limit = 300; 
 
 %** Useful for Plots **
 % x = -pi:pi/10:pi;
@@ -163,6 +163,7 @@ fobs        = zeros(obsSensorNumber, 1);
 psi_obs     = zeros(obsSensorNumber, 1);
 
 Fobs = 0;
+U_robot = 0;
 f_stock = sqrt(Q)*rand(1,obsSensorNumber);
 changeTargetDist = 40;
 euler_pass = 1/(lambdaTarget*10);
@@ -171,6 +172,7 @@ exit_parking = 0;
 phi_parking = [pi/2, pi, 0, 0];  %porquê estes valores?
 delay = 0;
 flag_middle_position = 0;
+
 %*==================================================
 
 %*---------------------- Initial Commands -------------------
@@ -270,26 +272,35 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %*----------- BEGIN YOUR CODE HERE ----------- %
     counter_target = 0;
     %-------------Navigation Direction-------------%
+    
     psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); %Angle in radians
-    ftar = -lambdaTarget*sin(phirobot - psitarget);
-
+    ftar = -lambdaTarget*sin(phirobot - psitarget); 
 
     %--------------Obstacle Avoidance--------------%
     deltaThetaObs = theta_obs(2) - theta_obs(1);
     %sebenta pag 11
     for i = 1:obsSensorNumber
-        lambda_obs(i)   = B1*exp(-dist(i)/B2);
+        lambda_obs(i)   = B1*exp(-dist(i)/B2);                                                                                                 %como o robo se deve comportar perante a proximidade do objeto;
         psi_obs(i)      = phirobot + theta_obs(i);
-        sigma(i)        = atan(tan(deltaThetaObs/2) + (rob_L/2)/((rob_W/2) + dist(i)));
+        sigma(i)        = atan(tan(deltaThetaObs/2) + (rob_L/2)/((rob_W/2) + dist(i)));                                                        %basea-se na distância para o ostáculo 
         fobs(i)         = lambda_obs(i)*(phirobot - psi_obs(i))*exp(-(phirobot - psi_obs(i))*(phirobot - psi_obs(i))/(2*sigma(i)*sigma(i)));
-        Fobs = Fobs + fobs(i);
+        Fobs = Fobs + fobs(i); 
+       
     end
+    
+
     f_stock = sqrt(Q)*randn(1,obsSensorNumber);
     wrobot = Fobs + f_stock + ftar;
     Fobs = 0;
+    % if (itarget == 4)
+    % wrobot = 0;
+    
+    % end
+
+
 
     %-----------------Speed Control----------------%
-    distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
+ distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
     if(exit_parking == 0)
         if(distance >= max_d_limit)
             vrobot_des = 100.0;
@@ -306,16 +317,26 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
             acc = -lambda_v*(vrobot_x - vrobot_des);
             vrobot_x = vrobot_x + acc*euler_pass;
         end
-    end
-
-
-    %----------------Parking System----------------%
+    end 
+ %----------------Parking System----------------%
     if(init_parking == 1 && itarget ~= 4)
         vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
         vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
 
         ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
         wrobot = ftar;
+    end
+     
+    if(itarget == 2 || itarget == 3)
+       
+        for i = 16:20
+            if fobs (i) > 0
+                k = (lambda_obs(i) * (sigma(i))^2) / sqrt(exp(1));
+                U_pot = lambda_obs(i) * (sigma(i)^2) * exp(-(phi - psi_obs(i))^2) / (2 * (sigma(i))^2) - k;
+                U_robot = U_pot + U_robot;
+                phi_parking(itarget) = phi_parking(itarget) + U_robot - k_phi;
+            end
+        end
     end
     if(exit_parking == 1)
         delay = delay + toc(start);
@@ -344,26 +365,25 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
             ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
             wrobot = ftar;
         end
-    end
+        if itarget == 2 && middle_position == 1
+        % Gradually reduce angular velocity to avoid abrupt rotation
+        wrobot = wrobot * 0.9; % Adjust the factor as needed
+        end
+    end 
 
-    %---------------Target Transition--------------%
+
+
+
+     %---------------Target Transition--------------%
     delta_y = YTARGET - yrobot;
     delta_x = XTARGET - xrobot;
     d = sqrt((delta_x)^2+(delta_y)^2);
     if(d<changeTargetDist)
         init_parking = 0;
         exit_parking = 1;
-        % if(exit_parking == 0)
-        %     if(itarget==1)
-        %         itarget=2;
+    end 
 
-        %     elseif(itarget==2)
-        %         itarget=3;
-        %     else
-        %         vrobot_x =0;
-        %     end
-        % end
-    end
+
     %*===============================================
     %*===============================================
     %*------------- END OF YOUR CODE -------------
@@ -381,4 +401,3 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %----------------------------------------------------------------------
 end
 sim.terminate();
-
