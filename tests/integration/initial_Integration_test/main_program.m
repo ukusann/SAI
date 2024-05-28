@@ -26,6 +26,11 @@ if(error_kuka==1)
     return;
 end
 
+[vision_rob, vision_rob]= vision(sim);
+if (vision_rob==1)
+    return;
+end
+
 % need to choose the arm to control
 robot_name = 'LBR_iiwa_14_R820';
 % need to choose the gripper/hand
