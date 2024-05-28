@@ -166,13 +166,14 @@ kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 % poseHand = [handPos_h(1:3); rpy_des']; 
 % poseHand = [handPos_h(1:3); 0.1744; -0.222; -0.333] 
 rpy_des_deg = [0, -90, -90];
-dir_flag = 0;
+rpy_des_deg2 = [0, 90, 0];
+dir_flag = 2;
 delay_dir = 0;
 %****************************************************
 
 
 %************** Inverse Kinematics ******************
-alpha = 45*pi/180;
+alpha = 60*pi/180;
 
 % [error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand);
 % if(error == 1)
@@ -298,8 +299,20 @@ while stop==0
                return;
             end
             delay_dir = 0;
-            dir_flag = 2;
+            dir_flag = 10;
         end
+    elseif(dir_flag == 2)
+        frontShelf3Pos(4, 3) = frontShelf3Pos(4, 3) + 0.15;  
+        poseHand = refWorldToBase(frontShelf3Pos(4, 1:3)', rpy_des_deg2')
+        [error, solutionsNum, joingAnglesSol1, joingAnglesSol2, joingAnglesSol3, joingAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand);
+        if(error == 1)
+            sim.terminate();
+            return;
+        end
+        optimalSolution = kuka_kinematics.chooseInvKinSolution([joingAnglesSol1'; joingAnglesSol2'; joingAnglesSol3'; joingAnglesSol4']);
+        % robot_arm.set_joints(joingAnglesSol4);
+        robot_arm.set_joints(optimalSolution');
+        dir_flag = 10;
     end
     %Inverse Kinematics - Send values for joints
     %Write joints.
