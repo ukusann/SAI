@@ -182,7 +182,7 @@ classdef arm_interface < handle
             end
 
             if strcmp(obj.hand_name,'RG2')==1
-                DistanceHand = 0.132+0.035;
+                DistanceHand = 0.132+0.040;
                 %ponta dos dedos aberto 0.174
                 %ponta dos dedos fechados 0.213
             elseif strcmp(obj.hand_name,'BarrettHand')==1
@@ -232,13 +232,13 @@ classdef arm_interface < handle
         %Function that allows you to set the joints from the arm
         function [error] = set_joints_defPos(obj) %armJoints (1-7) in rad
             error = 0;
-            armJoints(1)=0*pi/180;
-            armJoints(2)=0*pi/180;
-            armJoints(3)=0*pi/180;
-            armJoints(4)=0*pi/180;
-            armJoints(5)=0*pi/180;
-            armJoints(6)=0*pi/180;
-            armJoints(7)=0*pi/180;
+            armJoints(1)=-2.2985;
+            armJoints(2)=-1.1855;
+            armJoints(3)=0.8030;
+            armJoints(4)=2.0662;
+            armJoints(5)=-0.2730;
+            armJoints(6)=1.3041;
+            armJoints(7)=2.4532;
             for i=1:1:obj.number_of_joints
                 if armJoints(i)<obj.MinJointPos(i) || armJoints(i)>obj.MaxJointPos(i)
                     disp('ERROR: value outside the limits of the joints');

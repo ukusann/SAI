@@ -14,11 +14,11 @@ classdef statesHandler < handle
         %%********* Constructor method  *********%%
         function obj = statesHandler(distanceHand)
             obj.distanceHand = distanceHand;
-            obj.stopTimeConveyor = 2;
+            obj.stopTimeConveyor = 5;
             obj.stopTimePick = 3;
             obj.stopTimeShelf = 5;
-            obj.stopTimePlace = 2;
-            obj.stopTimeDefPos = 5;
+            obj.stopTimePlace = 3;
+            obj.stopTimeDefPos = 10;
 
         end
 
@@ -35,7 +35,7 @@ classdef statesHandler < handle
                 delay_out = delay + toc(start);
                 joints_out = trajectoryGen(initJoints, finalJoints, delay_out, obj.stopTimeConveyor);
                 setJoints = 1;
-                if(delay_out > obj.stopTimeConveyor)
+                if(delay_out >= obj.stopTimeConveyor)
                     delay_out = 0;
                     setJoints = 0;
                     stopTraj = 1;
@@ -62,7 +62,7 @@ classdef statesHandler < handle
                 delay_out = delay + toc(start);
                 joints_out = trajectoryGen(initJoints, finalJoints, delay_out, obj.stopTimePick);
                 setJoints = 1;
-                if(delay_out > obj.stopTimePick)
+                if(delay_out >= obj.stopTimePick)
                     delay_out = 0;
                     setJoints = 0;
                     closeGripper = 1;
@@ -89,7 +89,7 @@ classdef statesHandler < handle
                 delay_out = delay + toc(start);
                 joints_out = trajectoryGen(initJoints, finalJoints, delay_out, obj.stopTimeShelf);
                 setJoints = 1;
-                if(delay_out > obj.stopTimeShelf)
+                if(delay_out >= obj.stopTimeShelf)
                     delay_out = 0;
                     setJoints = 0;
                     stopTraj = 1;
@@ -117,7 +117,7 @@ classdef statesHandler < handle
                 delay_out = delay + toc(start);
                 joints_out = trajectoryGen(initJoints, finalJoints, delay_out, obj.stopTimePlace);
                 setJoints = 1;
-                if(delay_out > obj.stopTimePlace)
+                if(delay_out >= obj.stopTimePlace)
                     delay_out = 0;
                     setJoints = 0;
                     openGripper = 1;
@@ -145,7 +145,7 @@ classdef statesHandler < handle
                 delay_out = delay + toc(start);
                 joints_out = trajectoryGen(initJoints, finalJoints, delay_out, obj.stopTimeDefPos);
                 setJoints = 1;
-                if(delay_out > obj.stopTimeDefPos)
+                if(delay_out >= obj.stopTimeDefPos)
                     delay_out = 0;
                     setJoints = 0;
                     stopTraj = 1;

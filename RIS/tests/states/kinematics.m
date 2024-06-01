@@ -372,7 +372,7 @@ classdef kinematics < handle
             pitch_y = psi;
             roll_z = phi; 
         end
-    
+        % Rot(z)Rot(y)Rot(x)
         function RPYmatrix = RPYTransfMatrix(~, yaw_x, pitch_y, roll_z)
             RPYmatrix = [
                     cos(roll_z)*cos(pitch_y)    -sin(roll_z)*cos(yaw_x)+cos(yaw_x)*sin(pitch_y)*sin(yaw_x)      sin(roll_z)*sin(yaw_x)+cos(roll_z)*sin(pitch_y)*cos(yaw_x);

@@ -108,21 +108,23 @@ stop=0;
 %***********************
 
 
-%*Variables of robotic arm
-% Joint limits
+%********** Robotic Arm Variables ***********
+%* Joint limits
 kuka_joint_lim_min = MinPositionJoint;
 kuka_joint_lim_max = MaxPositionJoint;
 
-% Speed limits
+%* Speed limits
 kuka_vel_lim = pi/180*[85, 85, 100, 75, 130, 135, 135];
 
-% Denavit-Hartenberg modified parameters: alpha(i-1), a(i-1), di, thetai
+%* Denavit-Hartenberg modified parameters: alpha(i-1), a(i-1), di, thetai
 dh_alpha = pi/180*[0, -90, 90, 90, -90, -90, 90]';
 dh_a = [0, 0, 0, 0, 0, 0, 0]';
 dh_d = [Links(1), 0, Links(2), 0, Links(3), 0, Links(4)]';
 dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
 
-%*Get symbolic matrices
+%****************************************************
+
+%********** Symbolic Matrices ***********
 % syms L1 L2 L3 L4
 % syms theta1 theta2 theta3 theta4 theta5 theta6 theta7
 % symb_links = [L1, L2, L3, L4]; 
@@ -138,22 +140,19 @@ dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
 % symb_handPos = symb_transf07(1:3, 4)
 % symb_transf03 = symb_transf01*symb_transf12*symb_transf23
 % symb_transf47 = symb_transf45*symb_transf56*symb_transf67
+%****************************************************
 
-%*Creation of kinematics class
+%********** Kinematics class object creation ***********
 kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
-
-%************** Direct Kinematics ******************
-dir_flag = 10;
 
 %****************************************************
 
-
-%************** Inverse Kinematics ******************
-rpy_des_deg = [0, -90, -90];
-rpy_des_deg2 = [0, 100, 0];
-rpy_des_deg3 = [0, 110, 0];
-rpy_des_deg4 = [0, 0, 0];
-alpha = 25*pi/180;
+%********** Inverse Kinematics Variables ***********
+rpy_des_deg = [0, 90, 90];
+rpy_des_deg2 = [0, 110, 0];
+rpy_des_deg3 = [0, 120, 0];
+rpy_des_deg4 = [0, 90, 90];
+alpha = 40*pi/180;
 alpha2 = 45*pi/180;
 
 
@@ -161,12 +160,17 @@ alpha2 = 45*pi/180;
 
 %*************** Global Variables *******************
 stateMachine = statesHandler(DistanceHand);
-currentState = states.MoveArmConveyor;
+currentState = states.Idle;
 nexState = currentState;
-lastSolution = zeros(7,1);
+lastSolution = [-2.2985, -1.1855, 0.8030, 2.0662, -0.2730, 1.3041, 2.4532]';
 finalSolution = zeros(7,1);
 delay_dir = 0;
-robot_arm.set_joints_defPos();
+thresholdPosInX = -0.787;
+listMushCansToPick = [1, 1, 1];
+listSalsCansToPick = [1, 1, 1];
+canToPick = 0;
+shelfToPlace = zeros(3,1);
+
 %* ------ States flags --------
 canInPosition = 0;
 conveyorPosReached = 0;
@@ -180,6 +184,10 @@ start_traj = 0;
 closeGripper = 0;
 waitToMove = 1;
 exitShelf = 0;
+%****************************************************
+
+%*************** Initial Commands *******************
+robot_arm.set_joints_defPos();
 %*==================================================
 while stop==0
     %----------------------------------------------------------------------
@@ -268,46 +276,73 @@ while stop==0
     %----------------------------------------------------------------------
     % --- YOUR CODE --- %
     %%? ----------------State Idle----------------
+    if(currentState == states.Idle)
+        for i = 1:3
+            if(mushroomCanPos(i, 1) > thresholdPosInX)
+                if(listMushCansToPick(i) == 1)
+                    listMushCansToPick(i) = 0;
+                    canToPick = 10 + i;
+                    shelfToPlace = frontShelf3Pos(4, 1:3);
+                    canInPosition = 1; %todo: change state
+                    break;
+                end
+            end
+            if(salsageCanPos(i, 1) > thresholdPosInX)
+                if(listSalsCansToPick(i) == 1)
+                    listSalsCansToPick(i) = 0;
+                    canToPick = 20 + i;
+                    shelfToPlace = frontShelf3Pos(5, 1:3);
+                    canInPosition = 1; %todo: change state
+                    break;
+                end
+            end
+        end
+    end
     %%? ------------------------------------------
     
     %%? ----------State MoveArmConveyor-----------
     if(currentState == states.MoveArmConveyor)
-        offset = 0.24;
-        if(mushroomCanPos(1,1) > -0.79)
-            desPosition = mushroomCanPos(1, 1:3);
-            [delay_dir, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerMoveArmConveyor(lastSolution, finalSolution, start_traj, delay_dir, start, desPosition, rpy_des_deg, offset);
-            if(setJoints == 1)
-                setJoints = 0;
-                error = robot_arm.set_joints(joints);
-                if(error == 1)
-                    sim.terminate();
-                    return;
-                end
-            elseif(calcInvKin == 1)
-                calcInvKin = 0;
-                [error, solPossible, jointAnglesSol1, jointAnglesSol2, jointAnglesSol3, jointAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand);
-                if(error == 1)
-                    sim.terminate();
-                    return;
-                end
-                if(solPossible == 1234)
-                    solutions = [jointAnglesSol1'; jointAnglesSol2'; jointAnglesSol3'; jointAnglesSol4'];
-                elseif(solPossible == 34)
-                    solutions = [jointAnglesSol3', jointAnglesSol4'];
-                elseif(solPossible == 13)
-                    solutions = [jointAnglesSol1', jointAnglesSol3'];
-                else
-                    solutions = jointAnglesSol3';
-                end
-                optimalSolution = kuka_kinematics.chooseInvKinSolution(solutions);
-                finalSolution = optimalSolution';
-                start_traj = 1;
-            elseif(stopTraj == 1)
-                lastSolution = finalSolution;
-                start_traj = 0;
-                conveyorPosReached = 1; %todo: Change State
-            end
+        offset = DistanceHand + 0.012;
+        % desPosition = [-0.685, 0.00412, 0.90];
+        if(canToPick > 10 && canToPick < 20)
+            desPosition = mushroomCanPos(canToPick - 10, 1:3);
+        else
+            desPosition = salsageCanPos(canToPick - 20, 1:3);
         end
+        [delay_dir, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerMoveArmConveyor(lastSolution, finalSolution, start_traj, delay_dir, start, desPosition, rpy_des_deg, offset);
+        if(setJoints == 1)
+            setJoints = 0;
+            error = robot_arm.set_joints(joints);
+            if(error == 1)
+                sim.terminate();
+                return;
+            end
+        elseif(calcInvKin == 1)
+            calcInvKin = 0;
+            [error, solPossible, jointAnglesSol1, jointAnglesSol2, jointAnglesSol3, jointAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand);
+            if(error == 1)
+                sim.terminate();
+                return;
+            end
+            if(solPossible == 1234)
+                solutions = [jointAnglesSol1'; jointAnglesSol2'; jointAnglesSol3'; jointAnglesSol4'];
+            elseif(solPossible == 34)
+                solutions = [jointAnglesSol3', jointAnglesSol4'];
+            elseif(solPossible == 13)
+                solutions = [jointAnglesSol1', jointAnglesSol3'];
+            else
+                solutions = jointAnglesSol3';
+            end
+            optimalSolution = kuka_kinematics.chooseInvKinSolution(solutions);
+            finalSolution = optimalSolution';
+            start_traj = 1;
+        elseif(stopTraj == 1)
+            lastSolution = finalSolution;
+            delay_dir = 0;
+            start_traj = 0;
+            conveyorPosReached = 1; %todo: Change State
+        end
+      
     end
     %%? ------------------------------------------
 
@@ -315,12 +350,16 @@ while stop==0
     if(currentState == states.Pick)
         if(waitToMove == 1)
             delay_dir = delay_dir + toc(start);
-            if(delay_dir > 2)
+            if(delay_dir > 1)
                 waitToMove = 0;
                 delay_dir = 0;
             end
         else
-            desPosition = mushroomCanPos(1, 1:3);
+            if(canToPick > 10 && canToPick < 20)
+                desPosition = mushroomCanPos(canToPick - 10, 1:3);
+            else
+                desPosition = salsageCanPos(canToPick - 20, 1:3);
+            end
             [delay_dir, setJoints, calcInvKin, closeGripper, joints, poseHand] = stateMachine.handlerPick(lastSolution, finalSolution, start_traj, delay_dir, start, desPosition, rpy_des_deg);
             if(setJoints == 1)
                 setJoints = 0;
@@ -369,12 +408,12 @@ while stop==0
         offset_z = 0.15;
         if(waitToMove == 1)
             delay_dir = delay_dir + toc(start);
-            if(delay_dir > 3)
+            if(delay_dir > 2)
                 waitToMove = 0;
                 delay_dir = 0;
             end
         else
-            desPosition = frontShelf3Pos(4, 1:3);
+            desPosition = shelfToPlace;
             [delay_dir, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerMoveArmShelf(lastSolution, finalSolution, start_traj, delay_dir, start, desPosition, rpy_des_deg2, offset_y, offset_z);
             if(setJoints == 1)
                 setJoints = 0;
@@ -423,7 +462,7 @@ while stop==0
                 delay_dir = 0;
             end
         else
-            desPosition = frontShelf3Pos(4, 1:3);
+            desPosition = shelfToPlace;
             [delay_dir, setJoints, calcInvKin, openGripper, joints, poseHand] = stateMachine.handlerPlace(lastSolution, finalSolution, start_traj, delay_dir, start, desPosition, rpy_des_deg3, offset_y, offset_z);
             if(setJoints == 1)
                 setJoints = 0;
@@ -477,7 +516,7 @@ while stop==0
         elseif(exitShelf == 0)
             offset_y = -0.25;
             offset_z = 0.15;
-            desPosition = frontShelf3Pos(4, 1:3);
+            desPosition = shelfToPlace;
             [delay_dir, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerGoToDefPos(lastSolution, finalSolution, start_traj, delay_dir, start, desPosition, rpy_des_deg2, offset_y, offset_z);
             if(setJoints == 1)
                 setJoints = 0;
@@ -512,9 +551,9 @@ while stop==0
                 exitShelf = 1;
             end
         else
-            offset_y = 0;
-            offset_z = 0;
-            desPosition = [0, 0, 1.98];
+            offset_y = 0.0;
+            offset_z = 0.0;
+            desPosition = [-0.522, 0.0, 0.90];
             [delay_dir, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerGoToDefPos(lastSolution, finalSolution, start_traj, delay_dir, start, desPosition, rpy_des_deg4, offset_y, offset_z);
             if(setJoints == 1)
                 setJoints = 0;
@@ -525,7 +564,7 @@ while stop==0
                 end
             elseif(calcInvKin == 1)
                 calcInvKin = 0;
-                [error, solPossible, jointAnglesSol1, jointAnglesSol2, jointAnglesSol3, jointAnglesSol4] = kuka_kinematics.inverseKinematics(0, poseHand);
+                [error, solPossible, jointAnglesSol1, jointAnglesSol2, jointAnglesSol3, jointAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand);
                 if(error == 1)
                     sim.terminate();
                     return;
