@@ -14,11 +14,11 @@ classdef statesHandler < handle
         %%********* Constructor method  *********%%
         function obj = statesHandler(distanceHand)
             obj.distanceHand = distanceHand;
-            obj.stopTimeConveyor = 5;
+            obj.stopTimeConveyor = 3;
             obj.stopTimePick = 3;
-            obj.stopTimeShelf = 5;
-            obj.stopTimePlace = 3;
-            obj.stopTimeDefPos = 10;
+            obj.stopTimeShelf = 7;
+            obj.stopTimePlace = 1;
+            obj.stopTimeDefPos = 5;
 
         end
 

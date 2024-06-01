@@ -303,7 +303,6 @@ while stop==0
     %%? ----------State MoveArmConveyor-----------
     if(currentState == states.MoveArmConveyor)
         offset = DistanceHand + 0.012;
-        % desPosition = [-0.685, 0.00412, 0.90];
         if(canToPick > 10 && canToPick < 20)
             desPosition = mushroomCanPos(canToPick - 10, 1:3);
         else
@@ -404,11 +403,11 @@ while stop==0
 
     %%? ----------State MoveArmShelf--------------
     if(currentState == states.MoveArmShelf)
-        offset_y = -0.15;
+        offset_y = -0.12;
         offset_z = 0.15;
         if(waitToMove == 1)
             delay_dir = delay_dir + toc(start);
-            if(delay_dir > 2)
+            if(delay_dir > 3)
                 waitToMove = 0;
                 delay_dir = 0;
             end
@@ -453,11 +452,11 @@ while stop==0
 
     %%? ------------- State Place ----------------
     if(currentState == states.Place)
-        offset_y = -0.15;
+        offset_y = -0.12;
         offset_z = 0.15;
         if(waitToMove == 1)
             delay_dir = delay_dir + toc(start);
-            if(delay_dir > 1)
+            if(delay_dir > 0.5)
                 waitToMove = 0;
                 delay_dir = 0;
             end
