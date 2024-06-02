@@ -292,9 +292,9 @@ while stop==0
     %----------------------------------------------------------------------
     % --- YOUR CODE --- %
     hand = directKinematics(kuka_kinematics, dh_alpha, dh_a, dh_d, dh_theta, theta);
-    xe = rad2deg(hand(1));
-    ye = rad2deg(hand(2));
-    ze = rad2deg(hand(3));
+    xe = hand(1);
+    ye = hand(2);
+    ze = hand(3);
     yaw = rad2deg(hand(4));
     pitch = rad2deg(hand(5));
     roll = rad2deg(hand(6));
