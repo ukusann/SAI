@@ -89,6 +89,7 @@ end
 
 % % Create an instance of your GUI
 app = GUI;
+
 %app.theta = theta;
 % theta1 = theta(1);
 % theta2 = theta(2);
@@ -103,6 +104,7 @@ app = GUI;
 
 % gui.updateJointValues(theta1, theta2, theta3, theta4, theta5, theta6, theta7);
 % app = GUI(theta);
+
 %--------------------------------------------------------------------------
 error = sim.move_conveyorbelt(); %Put the conveyor belt in motion
 if error == 1
@@ -609,7 +611,7 @@ while stop==0
 
         theta7= rad2deg(theta(7));
 
-        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
+        thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(canInPosition == 1)
             % teste = 2;
             %  app.states(teste);

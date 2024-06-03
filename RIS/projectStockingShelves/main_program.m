@@ -87,6 +87,7 @@ if error == 1
     return;
 end
 app = GUI;
+
 %--------------------------------------------------------------------------
 error = sim.move_conveyorbelt(); %Put the conveyor belt in motion
 if error == 1
@@ -179,7 +180,7 @@ shelfPosReached = 0;
 isPlaced = 0;
 defPosReached = 0;
 %---------------------------Gui------------------------
-teste = 0;
+state_counter = 0;
 theta1 = 0;
 theta2 = 0;
 theta3 = 0;
@@ -617,104 +618,85 @@ while stop==0
 
     %%? ------------ Update State ----------------
     if(currentState == states.Idle)
-        teste = 1;
-        % app.states(teste);
+        state_counter = 1;
         theta1= rad2deg(theta(1));
         theta2 = rad2deg(theta(2));
         theta3= rad2deg(theta(3));
         theta4 = rad2deg(theta(4));
         theta5= rad2deg(theta(5));
         theta6 = rad2deg(theta(6));
-
         theta7= rad2deg(theta(7));
-
         app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(canInPosition == 1)
             canInPosition = 0;
             nexState = states.MoveArmConveyor;
         end
     elseif(currentState == states.MoveArmConveyor)
-        teste = 2;
-        % app.states(teste);
+        state_counter = 2;
         theta1= rad2deg(theta(1));
         theta2 = rad2deg(theta(2));
         theta3= rad2deg(theta(3));
         theta4 = rad2deg(theta(4));
         theta5= rad2deg(theta(5));
         theta6 = rad2deg(theta(6));
-
         theta7= rad2deg(theta(7));
-
         app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(conveyorPosReached == 1)
             conveyorPosReached = 0;
             nexState = states.Pick;
         end
     elseif(currentState == states.Pick)
-        teste = 3;
-        % app.states(teste);
+        state_counter = 3;
         theta1= rad2deg(theta(1));
         theta2 = rad2deg(theta(2));
         theta3= rad2deg(theta(3));
         theta4 = rad2deg(theta(4));
         theta5= rad2deg(theta(5));
         theta6 = rad2deg(theta(6));
-
         theta7= rad2deg(theta(7));
-
         app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(isPicked == 1)
             isPicked = 0;
             nexState = states.MoveArmShelf;
         end
     elseif(currentState == states.MoveArmShelf)
-        teste = 4;
-        % app.states(teste);
+        state_counter = 4;
         theta1= rad2deg(theta(1));
         theta2 = rad2deg(theta(2));
         theta3= rad2deg(theta(3));
         theta4 = rad2deg(theta(4));
         theta5= rad2deg(theta(5));
-        theta6 = rad2deg(theta(6));
-
         theta7= rad2deg(theta(7));
-
         app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(shelfPosReached == 1)
             shelfPosReached = 0;
             nexState = states.Place;
         end
     elseif(currentState == states.Place)
-        teste = 5;
-        %state = 5;
-        % app.states(teste);
+        state_counter = 5;
+
         theta1= rad2deg(theta(1));
         theta2 = rad2deg(theta(2));
         theta3= rad2deg(theta(3));
         theta4 = rad2deg(theta(4));
         theta5= rad2deg(theta(5));
         theta6 = rad2deg(theta(6));
-
         theta7= rad2deg(theta(7));
-
         app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(isPlaced == 1)
             isPlaced = 0;
             nexState = states.GoToDefPos;
         end
     elseif(currentState == states.GoToDefPos)
-        %teste = 6;
-        teste = 6;
-        % app.states(teste);
+        state_counter = 6;
+
         theta1= rad2deg(theta(1));
         theta2 = rad2deg(theta(2));
         theta3= rad2deg(theta(3));
         theta4 = rad2deg(theta(4));
         theta5= rad2deg(theta(5));
         theta6 = rad2deg(theta(6));
-
         theta7= rad2deg(theta(7));
-
         app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(defPosReached == 1)
             defPosReached = 0;
@@ -723,7 +705,7 @@ while stop==0
     end
 
     currentState = nexState;
-    states(app, teste);
+    states(app, state_counter);
     %%? ------------------------------------------
 
     m=m+1;
