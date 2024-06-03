@@ -86,6 +86,7 @@ if error == 1
     sim.terminate();
     return;
 end
+app = GUI;
 
 %--------------------------------------------------------------------------
 error = sim.move_conveyorbelt(); %Put the conveyor belt in motion
@@ -101,7 +102,7 @@ if error == 1
 end
 %*==================================================
 %*=================Parameters=======================
-%******* Default Variables ******* 
+%******* Default Variables *******
 start = tic;
 m=1;
 stop=0;
@@ -127,7 +128,7 @@ dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
 %********** Symbolic Matrices ***********
 % syms L1 L2 L3 L4
 % syms theta1 theta2 theta3 theta4 theta5 theta6 theta7
-% symb_links = [L1, L2, L3, L4]; 
+% symb_links = [L1, L2, L3, L4];
 % symb_transf01 = symbolicCalcTransf(0, dh_a(1), symb_links(1), theta1);
 % symb_transf12 = symbolicCalcTransf(sym(-pi)/2, dh_a(2), 0, theta2);
 % symb_transf23 = symbolicCalcTransf(sym(pi)/2, dh_a(3), symb_links(2), theta3);
@@ -178,6 +179,22 @@ isPicked = 0;
 shelfPosReached = 0;
 isPlaced = 0;
 defPosReached = 0;
+%---------------------------Gui------------------------
+state_counter = 0;
+theta1 = 0;
+theta2 = 0;
+theta3 = 0;
+theta4 = 0;
+theta5 = 0;
+theta6 = 0;
+theta7 = 0;
+yaw = 0;
+pitch = 0;
+roll = 0;
+xe = 0;
+ye = 0;
+ze = 0;
+
 
 %* ------ States aux flags --------
 start_traj = 0;
@@ -227,37 +244,37 @@ while stop==0
 
     % objectPosition - get target position
     for i = 1:8
-        [error,frontShelf1Pos(i, :)]=sim.get_target_position(frontShelf1(i));        
+        [error,frontShelf1Pos(i, :)]=sim.get_target_position(frontShelf1(i));
         if(error == 1)
             sim.terminate();
             return;
         end
 
-        [error,frontShelf2Pos(i, :)]=sim.get_target_position(frontShelf2(i));        
+        [error,frontShelf2Pos(i, :)]=sim.get_target_position(frontShelf2(i));
         if(error == 1)
             sim.terminate();
             return;
         end
 
-        [error,frontShelf3Pos(i, :)]=sim.get_target_position(frontShelf3(i));        
+        [error,frontShelf3Pos(i, :)]=sim.get_target_position(frontShelf3(i));
         if(error == 1)
             sim.terminate();
             return;
         end
 
-        [error,frontShelf4Pos(i, :)]=sim.get_target_position(frontShelf4(i));        
+        [error,frontShelf4Pos(i, :)]=sim.get_target_position(frontShelf4(i));
         if(error == 1)
             sim.terminate();
             return;
         end
 
-        [error,frontShelf5Pos(i, :)]=sim.get_target_position(frontShelf5(i));        
+        [error,frontShelf5Pos(i, :)]=sim.get_target_position(frontShelf5(i));
         if(error == 1)
             sim.terminate();
             return;
         end
 
-        [error,frontShelf6Pos(i, :)]=sim.get_target_position(frontShelf6(i));        
+        [error,frontShelf6Pos(i, :)]=sim.get_target_position(frontShelf6(i));
         if(error == 1)
             sim.terminate();
             return;
@@ -269,12 +286,20 @@ while stop==0
     if error == 1
         sim.terminate();
         return;
-    end 
+    end
 
     %trigger simulation step
     sim.trigger_simulation();
     %----------------------------------------------------------------------
     % --- YOUR CODE --- %
+    hand = directKinematics(kuka_kinematics, dh_alpha, dh_a, dh_d, dh_theta, theta);
+    xe = hand(1);
+    ye = hand(2);
+    ze = hand(3);
+    yaw = rad2deg(hand(4));
+    pitch = rad2deg(hand(5));
+    roll = rad2deg(hand(6));
+    app.pose_tip(xe, ye, ze, yaw, pitch, roll);
     %%? ----------------State Idle----------------
     if(currentState == states.Idle)
         for i = 1:3
@@ -299,7 +324,7 @@ while stop==0
         end
     end
     %%? ------------------------------------------
-    
+
     %%? ----------State MoveArmConveyor-----------
     if(currentState == states.MoveArmConveyor)
         offset = DistanceHand + 0.012;
@@ -341,7 +366,7 @@ while stop==0
             start_traj = 0;
             conveyorPosReached = 1; %todo: Change State
         end
-      
+
     end
     %%? ------------------------------------------
 
@@ -593,38 +618,94 @@ while stop==0
 
     %%? ------------ Update State ----------------
     if(currentState == states.Idle)
+        state_counter = 1;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(canInPosition == 1)
             canInPosition = 0;
             nexState = states.MoveArmConveyor;
         end
     elseif(currentState == states.MoveArmConveyor)
+        state_counter = 2;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(conveyorPosReached == 1)
             conveyorPosReached = 0;
             nexState = states.Pick;
         end
     elseif(currentState == states.Pick)
+        state_counter = 3;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(isPicked == 1)
             isPicked = 0;
             nexState = states.MoveArmShelf;
         end
     elseif(currentState == states.MoveArmShelf)
+        state_counter = 4;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(shelfPosReached == 1)
             shelfPosReached = 0;
             nexState = states.Place;
         end
     elseif(currentState == states.Place)
+        state_counter = 5;
+
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(isPlaced == 1)
             isPlaced = 0;
             nexState = states.GoToDefPos;
         end
     elseif(currentState == states.GoToDefPos)
+        state_counter = 6;
+
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(defPosReached == 1)
             defPosReached = 0;
             nexState = states.Idle;
-        end    
+        end
     end
 
     currentState = nexState;
+    states(app, state_counter);
     %%? ------------------------------------------
 
     m=m+1;
