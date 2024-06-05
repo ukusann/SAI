@@ -11,6 +11,8 @@ classdef simulator_interface < handle
         vrep
         clientID
         TargetHandle
+        ObjectHandle      % handle for the object (6 differents)
+        ObjectNames       %list of object names
         ConveyorOutHandle % handle for the conveyor out object
         ConveyorInHandle  % handle for the conveyor in object
     end
@@ -18,6 +20,8 @@ classdef simulator_interface < handle
     properties
         TARGET_Number
         targetName
+        OBJECT_Number 
+        
     end
     
     methods
@@ -63,6 +67,34 @@ classdef simulator_interface < handle
             % The first simulation step is now being executed
             %ensure it is finished so we can access signals
             obj.vrep.simxGetPingTime(obj.clientID);
+
+           
+            %Objects 
+            % Six different objects
+            obj.OBJECT_Number = 6;
+            obj.ObjectNames{1} = 'caixa_600_400_1';
+            obj.ObjectNames{2} = 'caixa_400_300_1';
+            obj.ObjectNames{3} = 'caixa_600_400_2';
+            obj.ObjectNames{4} = 'caixa_400_300_2';
+            obj.ObjectNames{5} = 'caixa_600_400_3';
+            obj.ObjectNames{6} = 'caixa_400_300_3';
+
+            %Get Targets Handle
+            for a=1:obj.OBJECT_Number
+                object_name = ['/',obj.ObjectNames{a}];
+                [res, obj.ObjectHandle{a}] = obj.vrep.simxGetObjectHandle(obj.clientID, obj.ObjectNames{a}, obj.vrep.simx_opmode_blocking);
+                if (res ~= obj.vrep.simx_return_ok)
+                    disp('ERROR: Failed getting object handle');
+                    error = 1;
+                    return;
+                end
+                [res,~] = obj.vrep.simxGetObjectPosition(obj.clientID,obj.ObjectHandle{a},-1,obj.vrep.simx_opmode_streaming)
+                if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
+                    disp('ERROR: Failed getting object position information');
+                    error = 1;
+                    return;
+                end
+            end
             
             
             %TODO: Change here to support more targets

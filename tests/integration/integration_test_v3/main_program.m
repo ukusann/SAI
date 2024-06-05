@@ -25,6 +25,10 @@ end
 if(error_kuka==1)
     return;
 end
+[vision_rob, error_rob] = vision(sim);
+if (error_rob == 1)
+    return;
+end
 
 % need to choose the arm to control
 robot_name = 'LBR_iiwa_14_R820';
@@ -208,7 +212,7 @@ waitForBox = 0;
 stateMachine = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, B1, B2, Q, changeTargetDist);
 currentState = states.GoToTarget;
 nextState = currentState;
-sim.move_conveyorbelt();
+%sim.move_conveyorbelt();
 robot_arm.set_joints_defPos();
 %*==================================================
 %%%---------------------- Start Robot Motion Behavior -------------------
@@ -402,6 +406,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     %%? ------------ Update State ----------------
     if(currentState == states.GoToTarget)
+        sim.move_conveyorbelt(1);
         if(parkPositionReached == 1)
             parkPositionReached = 0; % Reset aux flag
             if(itarget == 5)
