@@ -25,6 +25,10 @@ end
 if(error_kuka==1)
     return;
 end
+[vision_rob, error_rob] = vision(sim);
+if (error_rob == 1)
+    return;
+end
 
 % need to choose the arm to control
 robot_name = 'LBR_iiwa_14_R820';
@@ -141,6 +145,7 @@ start = tic;
 %*=================Parameters=======================
 %******* Mobile Robot *******  
 vrobot_min  = 30;
+vrobot_des = 60;
 lambdaTarget = 2.3;
 stop_time = 4;
 vinit = 50;
@@ -189,6 +194,9 @@ startRotate = 0;
 %***********************
 
 %***** System Flags *****
+boxAvailable = 0;
+retrieve_box = 0;
+retShelfRight = 0;
 parkPositionReached = 0;
 isParked = 0;
 picked = 0;
@@ -199,16 +207,16 @@ move_omni = 0;
 placed = 0;
 defPositionReached = 0;
 %***** Temp Flags *****
-box_high = 1;
-box_low = 0;
+box_high = 0;
+tmpDelay = 0;
 waitForBox = 0;
 %*==================================================
 
 %*---------------------- Initial Commands -------------------
 stateMachine = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, B1, B2, Q, changeTargetDist);
-currentState = states.GoToTarget;
+currentState = states.Idle;
 nextState = currentState;
-sim.move_conveyorbelt();
+sim.move_conveyorbelt(1);
 robot_arm.set_joints_defPos();
 %*==================================================
 %%%---------------------- Start Robot Motion Behavior -------------------
@@ -304,6 +312,18 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %*----------- BEGIN YOUR CODE HERE ----------- %
     %% Begin Code
     %%? ----------------State Idle----------------
+    if(currentState == states.Idle)
+        tmpDelay = tmpDelay + toc(start);
+        if(tmpDelay > 5)
+            tmpDelay = 0;
+            [error, ~, frame] = vision_rob.getFrame();
+            if(error==1)
+                % sim.terminate;
+                return;
+            end
+            boxToPick = vision_rob.processFrame(frame);
+        end
+    end
     %%? ------------------------------------------
 
     %%? ------------State GoToTarget--------------
@@ -401,7 +421,26 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %%? ------------------------------------------
 
     %%? ------------ Update State ----------------
-    if(currentState == states.GoToTarget)
+    if(currentState == states.Idle)
+        if(boxAvailable == 1)
+            boxAvailable = 0;
+            nextState = states.GoToTarget;
+            if(retrieve_box == 1)
+                retrieve_box = 0;
+                if(retShelfRight == 1)
+                    retShelfRight = 0;
+                    itarget = 3;
+                else
+                    itarget = 2;
+                end
+            else
+                itarget = 1;
+            end 
+        else
+            nextState = states.Idle;
+        end
+    elseif(currentState == states.GoToTarget)
+        sim.move_conveyorbelt(1);
         if(parkPositionReached == 1)
             parkPositionReached = 0; % Reset aux flag
             if(itarget == 5)
@@ -420,6 +459,25 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
 
     elseif(currentState == states.InitParking)
+       
+        vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
+        vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
+
+        ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
+        wrobot = ftar;
+  
+     
+    if(itarget == 2 || itarget == 3)
+       
+        for i = 16:20
+            if fobs (i) > 0
+                k = (lambda_obs(i) * (sigma(i))^2) / sqrt(exp(1));
+                U_pot = lambda_obs(i) * (sigma(i)^2) * exp(-(phi - psi_obs(i))^2) / (2 * (sigma(i))^2) - k;
+                U_robot = U_pot + U_robot;
+                phi_parking(itarget) = phi_parking(itarget) + U_robot - k_phi;
+            end
+        end
+    end
         if(isParked == 1)
             isParked = 0; % Reset aux flag
             if(itarget == 1 || itarget == 5)
