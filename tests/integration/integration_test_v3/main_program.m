@@ -145,6 +145,7 @@ start = tic;
 %*=================Parameters=======================
 %******* Mobile Robot *******  
 vrobot_min  = 30;
+vrobot_des = 60;
 lambdaTarget = 2.3;
 stop_time = 4;
 vinit = 50;
@@ -307,6 +308,8 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %*===============================================
     %*----------- BEGIN YOUR CODE HERE ----------- %
     %% Begin Code
+    psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); %Angle in radians
+    ftar = -lambdaTarget*sin(phirobot - psitarget); 
     %%? ----------------State Idle----------------
     %%? ------------------------------------------
 
@@ -425,6 +428,25 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
 
     elseif(currentState == states.InitParking)
+       
+        vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
+        vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
+
+        ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
+        wrobot = ftar;
+  
+     
+    if(itarget == 2 || itarget == 3)
+       
+        for i = 16:20
+            if fobs (i) > 0
+                k = (lambda_obs(i) * (sigma(i))^2) / sqrt(exp(1));
+                U_pot = lambda_obs(i) * (sigma(i)^2) * exp(-(phi - psi_obs(i))^2) / (2 * (sigma(i))^2) - k;
+                U_robot = U_pot + U_robot;
+                phi_parking(itarget) = phi_parking(itarget) + U_robot - k_phi;
+            end
+        end
+    end
         if(isParked == 1)
             isParked = 0; % Reset aux flag
             if(itarget == 1 || itarget == 5)
