@@ -207,14 +207,15 @@ move_omni = 0;
 placed = 0;
 defPositionReached = 0;
 %***** Temp Flags *****
-box_high = 0;
+box_high = 1;
+box_low = 0;
 tmpDelay = 0;
 waitForBox = 0;
 %*==================================================
 
 %*---------------------- Initial Commands -------------------
-stateMachine = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, B1, B2, Q, changeTargetDist);
-currentState = states.Idle;
+stateMachine = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, B1, B2, Q, changeTargetDist, phi_parking);
+currentState = states.GoToTarget;
 nextState = currentState;
 sim.move_conveyorbelt(1);
 robot_arm.set_joints_defPos();
@@ -334,7 +335,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     %%? ---------- State Init Parking ------------
     if(currentState == states.InitParking)
-        [vrobot_y, vrobot_x, wrobot, isParked] = stateMachine.handlerInitParking(YTARGET, XTARGET, yrobot, xrobot, vrobot_min, phirobot, phi_parking(itarget));
+        [vrobot_y, vrobot_x, wrobot, isParked, phi_parking(itarget)] = stateMachine.handlerInitParking(YTARGET, XTARGET, yrobot, xrobot, vrobot_min, phirobot, phi_parking(itarget), itarget, fobs);
     end
     %%? ------------------------------------------
 
@@ -459,25 +460,6 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
 
     elseif(currentState == states.InitParking)
-       
-        vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
-        vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
-
-        ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
-        wrobot = ftar;
-  
-     
-    if(itarget == 2 || itarget == 3)
-       
-        for i = 16:20
-            if fobs (i) > 0
-                k = (lambda_obs(i) * (sigma(i))^2) / sqrt(exp(1));
-                U_pot = lambda_obs(i) * (sigma(i)^2) * exp(-(phi - psi_obs(i))^2) / (2 * (sigma(i))^2) - k;
-                U_robot = U_pot + U_robot;
-                phi_parking(itarget) = phi_parking(itarget) + U_robot - k_phi;
-            end
-        end
-    end
         if(isParked == 1)
             isParked = 0; % Reset aux flag
             if(itarget == 1 || itarget == 5)

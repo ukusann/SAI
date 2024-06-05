@@ -15,11 +15,12 @@ classdef statesHandler < handle
         beta2
         Q
         changeTargetDist
+        phi_parking
     end
 
     methods
         %%********* Constructor method  *********%%
-        function obj = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, beta1, beta2, Q, changeTargetDist)
+        function obj = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, beta1, beta2, Q, changeTargetDist, phi_parking)
             obj.rob_L = rob_L;
             obj.rob_W = rob_W;
             obj.lambdaTarget = lambdaTarget;
@@ -33,6 +34,7 @@ classdef statesHandler < handle
             obj.beta2 = beta2;
             obj.Q = Q;
             obj.changeTargetDist = changeTargetDist;
+            obj.phi_parking = phi_parking;
         end
         % Method for handling the Idle state
         % function result = handleIdle(obj, arg1, arg2)
@@ -83,17 +85,29 @@ classdef statesHandler < handle
         %%************************************************************%%
 
         %%******** Method for handling the InitParking state *********%%
-        function [vrobot_y_out, vrobot_x_out, wrobot_out, isParked] = handlerInitParking(obj, YTARGET, XTARGET, yrobot, xrobot, vrobot_des, phirobot, phi_parking)
+        function [vrobot_y_out, vrobot_x_out, wrobot_out, isParked, phi_parking_out] = handlerInitParking(obj, YTARGET, XTARGET, yrobot, xrobot, vrobot_des, phirobot, phi_parking_in, itarget, fobs)
             isParked = 0;
-            ftar = -obj.lambdaTarget*sin(phirobot - phi_parking);
+            phi_parking_out = phi_parking_in;
+            ftar = -obj.lambdaTarget*sin(phirobot - phi_parking_in);
             distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
             psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
             if(distance > obj.changeTargetDist)    
-                vrobot_x_out = vrobot_des * cos(psitarget - phi_parking);
-                vrobot_y_out = vrobot_des * sin(psitarget - phi_parking);
+                vrobot_x_out = vrobot_des * cos(psitarget - phi_parking_in);
+                vrobot_y_out = vrobot_des * sin(psitarget - phi_parking_in);
                 wrobot_out = ftar;
+                if(itarget == 2 || itarget == 3)
+                    for i = 16:20
+                        if fobs (i) > 0
+                            k = (lambda_obs(i) * (sigma(i))^2) / sqrt(exp(1));
+                            U_pot = lambda_obs(i) * (sigma(i)^2) * exp(-(phi - psi_obs(i))^2) / (2 * (sigma(i))^2) - k;
+                            U_robot = U_pot + U_robot;
+                            phi_parking_out = phi_parking_in + U_robot - k_phi;
+                        end
+                    end
+                end
             else
                 isParked = 1; %todo: Change State Aux Flag
+                phi_parking_out = obj.phi_parking(itarget);
                 vrobot_x_out = 0;
                 vrobot_y_out = 0;
                 wrobot_out = ftar;
@@ -252,7 +266,7 @@ classdef statesHandler < handle
             vrobot_y_out = 0;
             wrobot_out = 0;
             delay_exitPark_out = delay_exitPark_in + toc(start);
-            if(delay_exitPark_out > 5)
+            if(delay_exitPark_out > 7)
                 exitPark = 1; %todo: Change State
                 delay_exitPark_out = 0;
                 vrobot_y_out = 0.0;
