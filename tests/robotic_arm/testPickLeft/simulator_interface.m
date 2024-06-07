@@ -84,7 +84,7 @@ classdef simulator_interface < handle
                 object_name = ['/',obj.ObjectNames{a}];
                 [res, obj.ObjectHandle{a}] = obj.vrep.simxGetObjectHandle(obj.clientID, obj.ObjectNames{a}, obj.vrep.simx_opmode_blocking);
                 if (res ~= obj.vrep.simx_return_ok)
-                    disp('ERROR: Failed getting object handle');
+                    disp('ERROR: Failed getting box handle');
                     error = 1;
                     return;
                 end
@@ -208,6 +208,28 @@ classdef simulator_interface < handle
             YTARGET=tposition(2)*100;      %cm
         end
         
+        function [error, boxPose] = get_boxPose(obj, a)
+            %UNTITLED2 Summary of this function goes here
+            %   Detailed explanation goes here
+            % Pose of boxes
+            error = 0;
+            [res,boxPosition] = obj.vrep.simxGetObjectPosition(obj.clientID,obj.ObjectHandle{a},-1,obj.vrep.simx_opmode_buffer);
+            if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
+                disp('ERROR: Failed getting box position!');
+                error = 1;
+                return;
+            end
+            
+            [res,boxOrientation] = obj.vrep.simxGetObjectOrientation(obj.clientID,obj.ObjectHandle{a},-1,obj.vrep.simx_opmode_blocking);
+            if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
+                disp('ERROR: Failed getting box orientation!');
+                error = 1;
+                return;
+            end
+
+            boxPose = [boxPosition, boxOrientation];
+
+        end
         %Function that allows you to put the conveyor belt stopped
         % function error = stop_conveyorbelt(obj)
         %     value = 0;

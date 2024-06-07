@@ -2,6 +2,6 @@
 
 classdef states
     enumeration
-        Idle, GoToTarget, InitParking, PickBox, PlaceBox, MoveArm, ExitParking, GoToDefPos
+        Idle, GoToTarget, InitParking, MoveArmEndEffector, PickBox, PlaceBox, MoveArmTransp, ExitParking, GoToDefPos
     end
 end

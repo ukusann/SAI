@@ -16,6 +16,10 @@ classdef statesHandler < handle
         Q
         changeTargetDist
         phi_parking
+        stopTimeTrasp
+        stopTimeEndEffector
+        stopTimePick
+        stopTimePlace
     end
 
     methods
@@ -35,6 +39,10 @@ classdef statesHandler < handle
             obj.Q = Q;
             obj.changeTargetDist = changeTargetDist;
             obj.phi_parking = phi_parking;
+            obj.stopTimeTrasp = 6;
+            obj.stopTimeEndEffector = 6; 
+            obj.stopTimePick = 3;
+            obj.stopTimePlace = 3;
         end
         % Method for handling the Idle state
         % function result = handleIdle(obj, arg1, arg2)
@@ -211,47 +219,31 @@ classdef statesHandler < handle
         end
         %%************************************************************%%   
         
-        %%******** Method for handling the MoveArm state *********%%
-        function [error, armMoved_out, delay_movArm_out, armJoints, setJoints, transPosArm, defPosArm] = handlerMoveArm(~, armMoved_in, picked, placed, delay_movArm_in, start)
-            error = 0;
-            armMoved_out = armMoved_in;
-            delay_movArm_out = 0;
-            armJoints = 0;
+        %%******** Method for handling the MoveArmEndEffector state *********%%
+        function [delay_out, setJoints, calcInvKin, joints_out, desPoseHand, stopTraj] = handlerMoveArmEndEffector(obj, initJoints, finalJoints, startTraj, delay, start, poseObj, poseRobot)
+            delay_out = 0;
             setJoints = 0;
-            transPosArm = 0;
-            defPosArm = 0;
-            if(armMoved_in == 0)
-                if(picked == 1) % Move to transport position
-                    armJoints(1)=-90*pi/180;
-                    armJoints(2)=0*pi/180;
-                    armJoints(3)=90*pi/180;
-                    armJoints(4)=90*pi/180;
-                    armJoints(5)=-90*pi/180;
-                    armJoints(6)=0*pi/180;
-                    armJoints(7)=0*pi/180;
+            calcInvKin = 0;
+            desPoseHand = zeros(1, 6);
+            joints_out = zeros(7, 1);
+            stopTraj = 0;
 
-                    setJoints = 1;
-                    armMoved_out = 1;
-                
-                elseif(placed == 1) % Move to default position
-                    setJoints = 1;
-                    armMoved_out = 1;
-                else
-                    disp('Error: Cannot identify if box was picked or placed!')
-                    error = 1;
-                    return;
-                end
+            if(startTraj == 1)
+                delay_out = delay + toc(start);
+                joints_out = trajectoryGen(initJoints, finalJoints, delay_out, obj.stopTimeEndEffector);
+                setJoints = 1;
+                if(delay_out >= obj.stopTimeEndEffector)
+                    delay_out = 0;
+                    setJoints = 0;
+                    stopTraj = 1;
+                end  
             else
-                delay_movArm_out = delay_movArm_in + toc(start);
-                if(delay_movArm_out > 5)
-                    armMoved_out = 0;
-                    delay_movArm_out = 0;
-                    if(picked == 1)
-                        transPosArm = 1; %todo: Change State Aux Flag
-                    elseif(placed == 1)
-                        defPosArm = 1; %todo: Change State Aux Flag
-                    end
-                end
+                [poseObjInBaseRef, rotObj] = (refWorldToBase(poseRobot, poseObj));
+                poseObjInBaseRef = poseObjInBaseRef';
+                rot07 = [rotObj(1:3, 1), -rotObj(1:3, 2), -rotObj(1:3, 3)];
+                [des_yaw_x, des_pitch_y, des_roll_z] = kinematics.computeMatrixToRPY(rot07);
+                desPoseHand = [poseObjInBaseRef(1), poseObjInBaseRef(2), poseObjInBaseRef(3)+0.5, des_yaw_x, des_pitch_y, des_roll_z]'
+                calcInvKin = 1;
             end
         end
         %%************************************************************%%  

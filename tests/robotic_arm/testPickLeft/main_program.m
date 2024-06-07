@@ -25,10 +25,11 @@ end
 if(error_kuka==1)
     return;
 end
-[vision_rob, error_rob] = vision(sim);
-if (error_rob == 1)
-    return;
-end
+
+% [vision_rob, error_rob] = vision(sim);
+% if (error_rob == 1)
+%     return;
+% end
 
 % need to choose the arm to control
 robot_name = 'LBR_iiwa_14_R820';
@@ -69,6 +70,13 @@ end
 % the hand
 %MinPositionJoint - array with minimum position for joint 1-6
 %MaxPositionJoint - array with maximum position for joint 1-6
+if error == 1
+    sim.terminate();
+    return;
+end
+
+[error,theta] = robot_arm.get_joints();
+%theta - Values for each joint.
 if error == 1
     sim.terminate();
     return;
@@ -191,6 +199,25 @@ delay_grip = 0;
 armMoved = 0;
 delay_movArm = 0;
 startRotate = 0;
+%* Joint limits
+kuka_joint_lim_min = MinPositionJoint;
+kuka_joint_lim_max = MaxPositionJoint;
+%* Denavit-Hartenberg modified parameters: alpha(i-1), a(i-1), di, thetai
+dh_alpha = pi/180*[0, -90, 90, 90, -90, -90, 90]';
+dh_a = [0, 0, 0, 0, 0, 0, 0]';
+dh_d = [Links(1), 0, Links(2), 0, Links(3), 0, Links(4)]';
+dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
+
+%* Kinematics class object creation
+kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
+alpha = 0*pi/180;
+
+lastSolution = theta;
+finalSolution = zeros(7,1);
+%***********************
+
+%***** Box Handler *****
+boxesPose = zeros(6, 6);
 %***********************
 
 %***** System Flags *****
@@ -201,7 +228,7 @@ parkPositionReached = 0;
 isParked = 0;
 picked = 0;
 transPosArm = 0;
-defPosArm = 0;
+atEndEffector = 0;
 exitPark = 0;
 move_omni = 0;
 placed = 0;
@@ -211,11 +238,15 @@ box_high = 1;
 box_low = 0;
 tmpDelay = 0;
 waitForBox = 0;
+start_traj = 0;
+closeGripper = 0;
+waitToMove = 1;
+exitShelf = 0;
 %*==================================================
 
 %*---------------------- Initial Commands -------------------
 stateMachine = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, B1, B2, Q, changeTargetDist, phi_parking);
-currentState = states.GoToTarget;
+currentState = states.MoveArmEndEffector;
 nextState = currentState;
 sim.move_conveyorbelt(1);
 robot_arm.set_joints_defPos();
@@ -226,6 +257,13 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     % set and get information to/from CoppeliaSim
     % avoid do processing in between ensure_all_data and trigger_simulation
     sim.ensure_all_data();
+
+    % theta - get joint value (rad) for arm
+    [error,theta] = robot_arm.get_joints();
+    if error == 1
+        return;
+    end
+
     % Convert longitudinal speed, lateral speed and angular speed into wheel
     % speed
     [error,vel_front_left,vel_front_right,vel_rear_left,vel_rear_right] = vehicle.Kinematics_vehicle(wrobot, vrobot_y,vrobot_x);
@@ -304,6 +342,16 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         return;
     end
 
+
+    for i=1:sim.OBJECT_Number
+        [error, boxesPose(i, :)] = sim.get_boxPose(i);
+        if(error==1)
+            return;
+        end 
+    end
+
+    [error, robotPoseInWorldRef] = robot_arm.get_robot_pose();
+
     % compute new vehicle velocity...
     % the simulation timestep is stored in timestep (value is not changed
     % while simulation is running)
@@ -317,12 +365,13 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         tmpDelay = tmpDelay + toc(start);
         if(tmpDelay > 5)
             tmpDelay = 0;
-            [error, ~, frame] = vision_rob.getFrame();
-            if(error==1)
-                % sim.terminate;
-                return;
-            end
-            boxToPick = vision_rob.processFrame(frame);
+            boxesPose
+            % [error, ~, frame] = vision_rob.getFrame();
+            % if(error==1)
+            %     % sim.terminate;
+            %     return;
+            % end
+            % boxToPick = vision_rob.processFrame(frame);
         end
     end
     %%? ------------------------------------------
@@ -346,6 +395,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
             sim.terminate();
             return;
         end
+
 
         if(setJoints == 1)
             error = robot_arm.set_joints(armJoints);
@@ -387,28 +437,46 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     end
     %%? ------------------------------------------
 
-    %%? -------------- State MoveArm -------------
-    if(currentState == states.MoveArm)
-        [error, armMoved, delay_movArm, armJoints, setJoints, transPosArm, defPosArm] = stateMachine.handlerMoveArm(armMoved, picked, placed, delay_movArm, start);
-        if error == 1
-            sim.terminate();
-            return;
-        end
-
+    %%? -------------- State MoveArmEndEffector -------------
+    if(currentState == states.MoveArmEndEffector)
+        [delay_movArm, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerMoveArmEndEffector(lastSolution, finalSolution, start_traj, delay_movArm, start, boxesPose(1, :), robotPoseInWorldRef);
         if(setJoints == 1)
-            if(placed == 1)
-                error = robot_arm.set_joints_defPos();
-            else
-                error = robot_arm.set_joints(armJoints);
-            end
-            if error == 1
+            setJoints = 0;
+            error = robot_arm.set_joints(joints);
+            if(error == 1)
                 sim.terminate();
                 return;
             end
+        elseif(calcInvKin == 1)
+            calcInvKin = 0;
+            [error, solPossible, jointAnglesSol1, jointAnglesSol2, jointAnglesSol3, jointAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand);
+            if(error == 1)
+                sim.terminate();
+                return;
+            end
+            if(solPossible == 1234)
+                solutions = [jointAnglesSol1'; jointAnglesSol2'; jointAnglesSol3'; jointAnglesSol4'];
+            elseif(solPossible == 34)
+                solutions = [jointAnglesSol3', jointAnglesSol4'];
+            elseif(solPossible == 13)
+                solutions = [jointAnglesSol1', jointAnglesSol3'];
+            else
+                solutions = jointAnglesSol3';
+            end
+            optimalSolution = kuka_kinematics.chooseInvKinSolution(solutions);
+            finalSolution = optimalSolution';
+            start_traj = 1;
+        elseif(stopTraj == 1)
+            lastSolution = finalSolution;
+            delay_movArm = 0;
+            start_traj = 0;
+            conveyorPosReached = 1; %todo: Change State
         end
     end
-    %%? ------------------------------------------
+    %%? ------------------------------------------------
 
+    %%? -------------- State MoveArmTransp -------------
+    %%? ------------------------------------------------
     %%? ---------- State Exit Parking ------------
     if(currentState == states.ExitParking)
         [vrobot_y, vrobot_x, wrobot, itarget, delay_exitPark, waitForBox, move_omni, exitPark] = stateMachine.handlerExitParking(YTARGET, XTARGET, yrobot, xrobot, vrobot_min, phirobot, phi_parking(itarget), box_low, box_high, picked, itarget, delay_exitPark, start);
@@ -464,37 +532,45 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
             isParked = 0; % Reset aux flag
             if(itarget == 1 || itarget == 5)
                 nextState = states.ExitParking;
-            elseif(picked == 0)
-                nextState = states.PickBox;
             else
-                nextState = states.PlaceBox;
+                nextState = states.MoveArmEndEffector;
             end
         else
             nextState = states.InitParking;   
         end
 
+    elseif(currentState == states.MoveArmEndEffector)
+        if(atEndEffector == 1)
+             atEndEffector = 0;
+             if(picked == 0)
+                 nextState = states.PickBox;
+             else
+                 nextState = states.PlaceBox;
+             end
+         else
+             nextState = states.MoveArmEndEffector;
+         end
+
     elseif(currentState == states.PickBox)
         if(picked == 1)
-            nextState = states.MoveArm;
+            nextState = states.MoveArmTransp;
         else
             nextState = states.PickBox;
         end
     
     elseif(currentState == states.PlaceBox)
         if(placed == 1)
-            nextState = states.MoveArm;
+            nextState = states.MoveArmTransp;
         else
             nextState = states.PlaceBox;
         end
 
-    elseif(currentState == states.MoveArm)
-        if(transPosArm == 1 || defPosArm == 1)
-            transPosArm = 0;
-            defPosArm = 0;
-            nextState = states.ExitParking;
-        else
-            nextState = states.MoveArm;
-        end
+    elseif(currentState == states.MoveArmTransp)
+        if(transPosArm == 1)
+             transPosArm = 0;
+         else
+             nextState = states.GoToDefPos;
+         end
 
     elseif(currentState == states.ExitParking)
         if(exitPark == 1)
@@ -532,5 +608,5 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     start = tic;
     %----------------------------------------------------------------------
 end
+disp(['---' newline 'Exiting simulation...' newline '---']);
 sim.terminate();
-

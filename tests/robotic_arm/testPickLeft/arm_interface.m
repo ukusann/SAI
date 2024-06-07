@@ -202,7 +202,7 @@ classdef arm_interface < handle
         end
 
         %Function that allows you to get the position of the arm
-        function [error,armPosition]=get_robot_position(obj)
+        function [error,armPose]= get_robot_pose(obj)
             error = 0;
             [res,armPosition] = obj.vrep.simxGetObjectPosition(obj.clientID,obj.RobotHandle,-1,obj.vrep.simx_opmode_buffer);
             if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
@@ -210,7 +210,18 @@ classdef arm_interface < handle
                 error = 1;
                 return;
             end
+
+            [res,armOrientation] = obj.vrep.simxGetObjectOrientation(obj.clientID,obj.RobotHandle,-1,obj.vrep.simx_opmode_blocking);
+            if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
+                disp('ERROR: Failed getting robot orientation information!');
+                error = 1;
+                return;
+            end        
+            
+            armPose = [armPosition, armOrientation];
         end
+
+
 
         %Function that allows you to set the joints from the arm
         function [error] = set_joints(obj, armJoints) %armJoints (1-7) in rad
