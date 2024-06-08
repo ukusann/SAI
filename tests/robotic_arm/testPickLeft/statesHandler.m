@@ -20,11 +20,12 @@ classdef statesHandler < handle
         stopTimeEndEffector
         stopTimePick
         stopTimePlace
+        distanceHand
     end
 
     methods
         %%********* Constructor method  *********%%
-        function obj = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, beta1, beta2, Q, changeTargetDist, phi_parking)
+        function obj = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, beta1, beta2, Q, changeTargetDist, phi_parking, distanceHand)
             obj.rob_L = rob_L;
             obj.rob_W = rob_W;
             obj.lambdaTarget = lambdaTarget;
@@ -39,10 +40,11 @@ classdef statesHandler < handle
             obj.Q = Q;
             obj.changeTargetDist = changeTargetDist;
             obj.phi_parking = phi_parking;
-            obj.stopTimeTrasp = 6;
-            obj.stopTimeEndEffector = 6; 
-            obj.stopTimePick = 3;
+            obj.stopTimeTrasp = 10;
+            obj.stopTimeEndEffector = 10; 
+            obj.stopTimePick = 8;
             obj.stopTimePlace = 3;
+            obj.distanceHand = distanceHand;
         end
         % Method for handling the Idle state
         % function result = handleIdle(obj, arg1, arg2)
@@ -123,53 +125,60 @@ classdef statesHandler < handle
         end
         %%************************************************************%%
 
-        %%******** Method for handling the PickBox state *********%%
-        function [error, close_gripper_out, delay_grip_out, isGripperClosed_out, armJoints, setJoints, closeHand, picked] = handlerPickBox(~, itarget, close_gripper_in, delay_grip_in, isGripperClosed_in, start)
-            error = 0;
-            close_gripper_out = close_gripper_in;
-            delay_grip_out = 0;
-            isGripperClosed_out = isGripperClosed_in;
-            armJoints = 0;
+        %%******** Method for handling the MoveArmEndEffector state *********%%
+        function [delay_out, setJoints, calcInvKin, joints_out, desPoseHand, stopTraj] = handlerMoveArmEndEffector(obj, initJoints, finalJoints, startTraj, delay, start, poseObj, poseRobot)
+            delay_out = 0;
             setJoints = 0;
-            closeHand = 0;
-            picked = 0; 
-            if(close_gripper_in == 0)
-                if(itarget == 2)
-                    armJoints(1)=90*pi/180;
-                    armJoints(2)=0*pi/180;
-                    armJoints(3)=-90*pi/180;
-                    armJoints(4)=-90*pi/180;
-                    armJoints(5)=90*pi/180;
-                    armJoints(6)=0*pi/180;
-                    armJoints(7)=0*pi/180;
-                elseif(itarget == 3)
-                    armJoints(1)=90*pi/180;
-                    armJoints(2)=0*pi/180;
-                    armJoints(3)=-90*pi/180;
-                    armJoints(4)=-90*pi/180;
-                    armJoints(5)=90*pi/180;
-                    armJoints(6)=0*pi/180;
-                    armJoints(7)=0*pi/180;
-                else
-                    disp('Error in target to move robotic arm!');
-                    error = 1;
-                    return;
-                end
-                
+            calcInvKin = 0;
+            desPoseHand = zeros(1, 6);
+            joints_out = zeros(7, 1);
+            stopTraj = 0;
+
+            if(startTraj == 1)
+                delay_out = delay + toc(start);
+                joints_out = trajectoryGen(initJoints, finalJoints, delay_out, obj.stopTimeEndEffector);
                 setJoints = 1;
-                close_gripper_out = 1;
+                if(delay_out >= obj.stopTimeEndEffector)
+                    delay_out = 0;
+                    setJoints = 0;
+                    stopTraj = 1;
+                end  
             else
-                delay_grip_out = delay_grip_in + toc(start);
-                if(delay_grip_out > 3 && isGripperClosed_in == 0)
-                    closeHand = 1;
-                    isGripperClosed_out = 1;
-                    
-                elseif(delay_grip_out > 6)
-                    isGripperClosed_out = 0;
-                    close_gripper_out = 0;
-                    delay_grip_out = 0;
-                    picked = 1; %todo: Change State Aux Flag
-                end
+                [poseObjInBaseRef, rotObj] = (refWorldToBase(poseRobot, poseObj));
+                poseObjInBaseRef = poseObjInBaseRef';
+                rot07 = [rotObj(1:3, 1), -rotObj(1:3, 2), -rotObj(1:3, 3)];
+                [des_yaw_x, des_pitch_y, des_roll_z] = kinematics.computeMatrixToRPY(rot07);
+                desPoseHand = [poseObjInBaseRef(1)+0.05, poseObjInBaseRef(2), poseObjInBaseRef(3)+obj.distanceHand+0.21, des_yaw_x, des_pitch_y, des_roll_z]';
+                calcInvKin = 1;
+            end
+        end
+        %%************************************************************%%  
+
+        %%******** Method for handling the PickBox state *********%%
+        function [delay_out, setJoints, calcInvKin, joints_out, desPoseHand, closeGripper] = handlerPickBox(obj, initJoints, finalJoints, startTraj, delay, start, poseObj, poseRobot)
+            delay_out = 0;
+            setJoints = 0;
+            calcInvKin = 0;
+            desPoseHand = zeros(1, 6);
+            joints_out = zeros(7, 1);
+            closeGripper = 0;
+
+            if(startTraj == 1)
+                delay_out = delay + toc(start);
+                joints_out = trajectoryGen(initJoints, finalJoints, delay_out, obj.stopTimePick);
+                setJoints = 1;
+                if(delay_out >= obj.stopTimePick)
+                    delay_out = 0;
+                    setJoints = 0;
+                    closeGripper = 1;
+                end  
+            else
+                [poseObjInBaseRef, rotObj] = (refWorldToBase(poseRobot, poseObj));
+                poseObjInBaseRef = poseObjInBaseRef';
+                rot07 = [rotObj(1:3, 1), -rotObj(1:3, 2), -rotObj(1:3, 3)];
+                [des_yaw_x, des_pitch_y, des_roll_z] = kinematics.computeMatrixToRPY(rot07);
+                desPoseHand = [poseObjInBaseRef(1)+0.1, poseObjInBaseRef(2), poseObjInBaseRef(3)+obj.distanceHand, des_yaw_x, des_pitch_y, des_roll_z]';
+                calcInvKin = 1;
             end
         end
         %%************************************************************%%
@@ -219,8 +228,8 @@ classdef statesHandler < handle
         end
         %%************************************************************%%   
         
-        %%******** Method for handling the MoveArmEndEffector state *********%%
-        function [delay_out, setJoints, calcInvKin, joints_out, desPoseHand, stopTraj] = handlerMoveArmEndEffector(obj, initJoints, finalJoints, startTraj, delay, start, poseObj, poseRobot)
+        %%******** Method for handling the MoveArmTransp state *********%%
+        function [delay_out, setJoints, calcInvKin, joints_out, desPoseHand, stopTraj] = handlerMoveArmTransp(obj, initJoints, finalJoints, startTraj, delay, start, poseObj, poseRobot, step)
             delay_out = 0;
             setJoints = 0;
             calcInvKin = 0;
@@ -230,9 +239,9 @@ classdef statesHandler < handle
 
             if(startTraj == 1)
                 delay_out = delay + toc(start);
-                joints_out = trajectoryGen(initJoints, finalJoints, delay_out, obj.stopTimeEndEffector);
+                joints_out = trajectoryGen(initJoints, finalJoints, delay_out, obj.stopTimeTrasp);
                 setJoints = 1;
-                if(delay_out >= obj.stopTimeEndEffector)
+                if(delay_out >= obj.stopTimeTrasp)
                     delay_out = 0;
                     setJoints = 0;
                     stopTraj = 1;
@@ -242,7 +251,13 @@ classdef statesHandler < handle
                 poseObjInBaseRef = poseObjInBaseRef';
                 rot07 = [rotObj(1:3, 1), -rotObj(1:3, 2), -rotObj(1:3, 3)];
                 [des_yaw_x, des_pitch_y, des_roll_z] = kinematics.computeMatrixToRPY(rot07);
-                desPoseHand = [poseObjInBaseRef(1), poseObjInBaseRef(2), poseObjInBaseRef(3)+0.5, des_yaw_x, des_pitch_y, des_roll_z]'
+                if(step == 0)
+                    desPoseHand = [poseObjInBaseRef(1)+0.3, poseObjInBaseRef(2)-0.5, poseObjInBaseRef(3)+obj.distanceHand+0.2, des_yaw_x, des_pitch_y, des_roll_z+pi/2]';
+                elseif(step == 1)
+                    desPoseHand = [poseObjInBaseRef(1)-0.1, poseObjInBaseRef(2)-0.5, poseObjInBaseRef(3)+obj.distanceHand+0.2, des_yaw_x, des_pitch_y, des_roll_z+pi/2]';
+                elseif(step == 2)
+                    desPoseHand = [poseObjInBaseRef(1)-0.1, poseObjInBaseRef(2)-0.5, poseObjInBaseRef(3)+obj.distanceHand+0.05, des_yaw_x, des_pitch_y, des_roll_z+pi/2]';
+                end
                 calcInvKin = 1;
             end
         end
@@ -270,16 +285,16 @@ classdef statesHandler < handle
                     vrobot_y_out = 0;
                 end
             else
-                if(itarget_in == 5) 
+                if(itarget_in == 5) % Central Position
                     exitPark = 1; %todo: Change State
                     if(picked == 1)
-                        itarget_out = 4;
+                        itarget_out = 4; % Conveyor_out
                     else
                         move_omni = 1; %todo: Change State
                         if(box_high == 1)
-                            itarget_out = 2;
+                            itarget_out = 2; % ShelfLeft
                         elseif(box_low == 1)
-                            itarget_out = 3;
+                            itarget_out = 3; % ShelfRight
                         else
                             waitForBox = 1;
                         end

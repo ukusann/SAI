@@ -384,10 +384,10 @@ classdef kinematics < handle
         function maxDiff = maxDiffAngles(angles)
             maxDiff = 0;
             for i = 2:size(angles, 2)
-                diff = angles(1, i) - angles(1, i-1); 
+                diff = abs(angles(1, i)) - abs(angles(1, i-1)); 
                 if(maxDiff == 0)
                     maxDiff = diff;
-                elseif(diff < maxDiff)
+                elseif(diff > maxDiff)
                     maxDiff = diff;
                 end
             end

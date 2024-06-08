@@ -739,22 +739,22 @@ classdef kuka_interface < handle
             erro = 0;
             [res , ~, obj.auxDataS1VS1, ~] = obj.vrep.simxReadVisionSensor(obj.clientID, obj.S1_VS1_handle, obj.vrep.simx_opmode_buffer);
             if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
-                disp('ERROR: Failed getting sensor data for S1_VS1!');
+                % disp('ERROR: Failed getting sensor data for S1_VS1!');
                 erro = 1;
             end
             [res , ~, obj.auxDataS1VS2, ~] = obj.vrep.simxReadVisionSensor(obj.clientID, obj.S1_VS2_handle, obj.vrep.simx_opmode_buffer);
             if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
-                disp('ERROR: Failed getting sensor data for S1_VS2!');
+                % disp('ERROR: Failed getting sensor data for S1_VS2!');
                 erro = 1;
             end
             [res , ~, obj.auxDataS2VS1, ~] = obj.vrep.simxReadVisionSensor(obj.clientID, obj.S2_VS1_handle, obj.vrep.simx_opmode_buffer);
             if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
-                disp('ERROR: Failed getting sensor data for S2_VS1!');
+                % disp('ERROR: Failed getting sensor data for S2_VS1!');
                 erro = 1;
             end
             [res , ~, obj.auxDataS2VS2, ~] = obj.vrep.simxReadVisionSensor(obj.clientID, obj.S2_VS2_handle, obj.vrep.simx_opmode_buffer);
             if (res ~= obj.vrep.simx_return_ok && res ~= obj.vrep.simx_return_novalue_flag)
-                disp('ERROR: Failed getting sensor data for S2_VS2!');
+                % disp('ERROR: Failed getting sensor data for S2_VS2!');
                 erro = 1;
             end
         end
