@@ -269,7 +269,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     d = sqrt((delta_x)^2+(delta_y)^2);
     if(d<changeTargetDist)    
         if(itarget==1)
-            itarget=2;
+         %   itarget=2;
             sim.move_conveyorbelt(1);
             sim.stop_conveyorbelt(2);
   
