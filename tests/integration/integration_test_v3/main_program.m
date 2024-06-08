@@ -11,7 +11,7 @@
 %Output:
 % sim - pointer to class simulator_interface
 % error_sim = 1 - impossible to connect to simulator
-[sim,error_sim] = simulator_interface();
+ [sim,error_sim] = simulator_interface();
 if(error_sim==1)
     return;
 end
@@ -151,6 +151,7 @@ stop_time = 4;
 vinit = 50;
 min_d_limit = 150;
 max_d_limit = 300;
+
 %***********************
 
 %***** Obstacle Avoidance *****
@@ -180,6 +181,11 @@ euler_pass = 1/(lambdaTarget*10);
 phi_parking = [pi/2, pi, 0, pi/2, pi];
 delay_exitPark = 0;
 delay_rotate = 0;
+U_robot = 0;
+cont_left_sheld_pick = 0;
+cont_left_sheld_place = 0;
+cont_right_sheld_pick = 0;
+cont_right_sheld_place = 0;
 %***********************
 
 %***** Robotic Arm *****
@@ -322,11 +328,27 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %%? ---------- State Init Parking ------------
     if(currentState == states.InitParking)
         [vrobot_y, vrobot_x, wrobot, isParked] = stateMachine.handlerInitParking(YTARGET, XTARGET, yrobot, xrobot, vrobot_min, phirobot, phi_parking(itarget));
+        % %--------------Obstacle Avoidance--------------%
+            deltaThetaObs = theta_obs(2) - theta_obs(1);
+            Fobs = 0;
+            for i = 1:obsSensorNumber
+                lambda_obs(i)   = B1*exp(-dist(i)/(B2));
+                psi_obs(i)      = phirobot + theta_obs(i);
+                sigma(i)        = atan(tan(deltaThetaObs/2) + (rob_L/2)/((rob_W/2) + dist(i)));
+                fobs(i)         = lambda_obs(i)*(phirobot - psi_obs(i))*exp(-(phirobot - psi_obs(i))*(phirobot - psi_obs(i))/(2*sigma(i)*sigma(i)));
+                Fobs = Fobs + fobs(i);
+            end
+            f_stock = sqrt(Q)*randn(1,obsSensorNumber);
+            wrobot_out = Fobs + f_stock + ftar;
+           
+   
+        
     end
     %%? ------------------------------------------
 
     %%? -------------- State Pick ----------------
     if(currentState == states.PickBox)
+      
         [error, close_gripper, delay_grip, isGripperClosed, armJoints, setJoints, closeHand, picked] = stateMachine.handlerPickBox(itarget, close_gripper, delay_grip, isGripperClosed, start);
         if error == 1
             sim.terminate();
@@ -412,8 +434,9 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         sim.move_conveyorbelt(1);
         if(parkPositionReached == 1)
             parkPositionReached = 0; % Reset aux flag
+
             if(itarget == 5)
-                nextState = states.GoToDefPos; 
+                nextState = states.GoToDefPos;
             else
                 nextState = states.InitParking;
             end
@@ -429,24 +452,33 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     elseif(currentState == states.InitParking)
        
+
         vrobot_x = vrobot_des * cos(psitarget - phi_parking(itarget));
         vrobot_y = vrobot_des * sin(psitarget - phi_parking(itarget));
 
         ftar = -lambdaTarget*sin(phirobot - phi_parking(itarget));
+        
+        %Pick Right shelf
+        %ftar = lambdaTarget*sin(phirobot - phi_parking(itarget));
         wrobot = ftar;
-  
+
      
-    if(itarget == 2 || itarget == 3)
-       
-        for i = 16:20
-            if fobs (i) > 0
-                k = (lambda_obs(i) * (sigma(i))^2) / sqrt(exp(1));
-                U_pot = lambda_obs(i) * (sigma(i)^2) * exp(-(phi - psi_obs(i))^2) / (2 * (sigma(i))^2) - k;
-                U_robot = U_pot + U_robot;
-                phi_parking(itarget) = phi_parking(itarget) + U_robot - k_phi;
+            %para o pick left shelf
+            if (dist(29) < 50 && dist(28) < 50 && dist(27) < 50 && dist(26) < 50)
+                     vrobot_y = 0;
+                     vrobot_x= 0;
+                     wrobot = 0;
             end
-        end
-    end
+      
+              %para o pick right shelf
+            %phi_parking(itarget) = - phi_parking(itarget);
+            if (dist(1)< 60 && dist(2) < 60 && dist(3) < 60)
+                vrobot_y = 0;
+                vrobto_x = 0;
+                wrobot = 0;
+            end
+
+
         if(isParked == 1)
             isParked = 0; % Reset aux flag
             if(itarget == 1 || itarget == 5)
@@ -469,7 +501,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     
     elseif(currentState == states.PlaceBox)
         if(placed == 1)
-            nextState = states.MoveArm;
+            nextState = states.GoToDefPos;
         else
             nextState = states.PlaceBox;
         end

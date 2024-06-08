@@ -89,9 +89,9 @@ classdef statesHandler < handle
             distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
             psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot); % Angle in radians
             if(distance > obj.changeTargetDist)    
-                vrobot_x_out = vrobot_des * cos(psitarget - phi_parking);
-                vrobot_y_out = vrobot_des * sin(psitarget - phi_parking);
-                wrobot_out = ftar;
+                    vrobot_x_out = vrobot_des * cos(psitarget - phi_parking);
+                    vrobot_y_out = vrobot_des * sin(psitarget - phi_parking);
+                    wrobot_out = ftar;          
             else
                 isParked = 1; %todo: Change State Aux Flag
                 vrobot_x_out = 0;
@@ -162,8 +162,9 @@ classdef statesHandler < handle
             setJoints = 0;
             openHand = 0;
             picked = 1;
-            placed = 0; 
+            placed = 0;       
             if(open_gripper_in == 0)
+
                 if(itarget ~= 1)
                     armJoints(1)=90*pi/180;
                     armJoints(2)=0*pi/180;
@@ -177,7 +178,7 @@ classdef statesHandler < handle
                     error = 1;
                     return;
                 end
-                
+
                 setJoints = 1;
                 open_gripper_out = 1;
             else
@@ -185,7 +186,7 @@ classdef statesHandler < handle
                 if(delay_grip_out > 3 && isGripperOpened_in == 0)
                     openHand = 1;
                     isGripperOpened_out = 1;
-                    
+
                 elseif(delay_grip_out > 6)
                     isGripperOpened_out = 0;
                     open_gripper_out = 0;
@@ -300,6 +301,7 @@ classdef statesHandler < handle
             defPositionReached = 0;
             psitarget = atan2(YTARGET - yrobot, XTARGET - xrobot);
             distance = sqrt((YTARGET - yrobot)^2 + (XTARGET - xrobot)^2);
+
             if(distance <= obj.changeTargetDist || startRotate_in == 1)
                 startRotate_out = 1;    
                 vrobot_x_out = 5 * cos(psitarget - phi_parking);
