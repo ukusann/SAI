@@ -176,14 +176,12 @@ classdef simulator_interface < handle
          [res, obj.sensorHandle] = obj.vrep.simxGetObjectHandle(obj.clientID, 'Proximity_sensor', obj.vrep.simx_opmode_blocking);
         if res == obj.vrep.simx_return_ok
             disp('Sensor Handle is ok');
-        end 
-        % Ler o sinal de detecção do sensor de proximidade
+        end
         [res,detectionState,~,~,~]  = obj.vrep.simxReadProximitySensor(obj.clientID, 'Proximity_sensor', obj.vrep.simx_opmode_buffer);
 
          %if res == obj.vrep.simx_return_ok
         if detectionState
         disp(['Object detected!',num2str(detectionState)]);
-        % Faça algo aqui se algo foi detectado
             else
         disp(['Nothing detected',num2str(detectionState)]);
     end
