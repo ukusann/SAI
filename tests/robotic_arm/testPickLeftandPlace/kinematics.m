@@ -215,20 +215,55 @@ classdef kinematics < handle
                 theta1_b = atan2((rotation_03(2,3) / sin(theta2_b)), ( rotation_03(1,3) / sin(theta2_b))); %todo: theta1 sol2
                 theta3_b = atan2((rotation_03(3,2) / sin(theta2_b)), (-rotation_03(3,1) / sin(theta2_b))); %todo: theta3 sol2
                 
+
+    
                 if((theta2_a > obj.kuka_joint_lim_max(2)) || (theta2_b < obj.kuka_joint_lim_min(2)))
                     disp(['---' newline 'Error in theta2!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
                     error = 1;
                     return;  
-                    
-                elseif((theta1_a > obj.kuka_joint_lim_max(1)) || (theta1_a < obj.kuka_joint_lim_min(1)) || (theta1_b > obj.kuka_joint_lim_max(1)) || (theta1_b < obj.kuka_joint_lim_min(1)))
-                    disp(['---' newline 'Error in theta1!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                end
+
+                err_theta1a = obj.checkThetaLimit(1, theta1_a);
+                err_theta1b = obj.checkThetaLimit(1, theta1_b);
+
+                if(err_theta1a ~= 0 && err_theta1b ~=0)
+                    disp(['---' newline 'Error in theta1!' newline 'Value is outside joint limits: ' newline sprintf('Theta1 A: %f, Theta1 B: %f', theta1_a, theta1_b) newline 'Exiting simulation...' newline '---']);
                     error = 1;
-                    return; 
-                    
-                elseif((theta3_a > obj.kuka_joint_lim_max(3)) || (theta3_a < obj.kuka_joint_lim_min(3)) || (theta3_b > obj.kuka_joint_lim_max(3)) || (theta3_b < obj.kuka_joint_lim_min(3)))
-                    disp(['---' newline 'Error in theta3!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    return;  
+                else
+                    if(err_theta1a == 0)
+                        if(err_theta1b ~= 0)
+                            theta1_b = theta1_a;
+                            theta3_b = theta3_a;
+                        end
+                    else
+                        if(err_theta1b == 0)
+                            theta1_a = theta1_b;
+                            theta3_a = theta3_b;
+                        end
+                    end
+                end
+
+                err_theta3a = obj.checkThetaLimit(3, theta3_a);
+                err_theta3b = obj.checkThetaLimit(3, theta3_b);
+
+
+                if(err_theta3a ~= 0 && err_theta3b ~=0)
+                    disp(['---' newline 'Error in theta3!' newline 'Value is outside joint limits: ' newline sprintf('Theta3 A: %f, Theta3 B: %f', theta3_a, theta3_b) newline 'Exiting simulation...' newline '---']);
                     error = 1;
-                    return; 
+                    return;  
+                else
+                    if(err_theta3a == 0)
+                        if(err_theta3b ~= 0)
+                            theta3_b = theta3_a;
+                            theta1_b = theta1_a;
+                        end
+                    else
+                        if(err_theta3b == 0)
+                            theta3_a = theta3_b;
+                            theta1_a = theta1_b;
+                        end
+                    end
                 end
             end
             %*****
@@ -271,19 +306,52 @@ classdef kinematics < handle
                 theta7_b = atan2(( rotation_47(2,2) / sin(theta6_b)), (-rotation_47(2,1) / sin(theta6_b))); %todo: theta7 sol2
                 
                 if((theta6_a > obj.kuka_joint_lim_max(6)) || (theta6_b < obj.kuka_joint_lim_min(6)))
-                    disp(['---' newline 'Error in theta6!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    disp(['---' newline 'Error in theta6!' newline 'Value is outside joint limits:' newline newline sprintf('Theta6 A: %f, Theta6 B: %f', theta6_a, theta6_b) newline 'Exiting simulation...' newline '---']);
                     error = 1;
                     return;  
-                
-                elseif((theta5_a > obj.kuka_joint_lim_max(5)) || (theta5_a < obj.kuka_joint_lim_min(5)) || (theta5_b > obj.kuka_joint_lim_max(5)) || (theta5_b < obj.kuka_joint_lim_min(5)))
-                    disp(['---' newline 'Error in theta5!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                end
+
+                err_theta5a = obj.checkThetaLimit(5, theta5_a);
+                err_theta5b = obj.checkThetaLimit(5, theta5_b);
+
+
+                if(err_theta5a ~= 0 && err_theta5b ~=0)
+                    disp(['---' newline 'Error in theta5!' newline 'Value is outside joint limits: ' newline sprintf('Theta5 A: %f, Theta5 B: %f', theta5_a, theta5_b) newline 'Exiting simulation...' newline '---']);
                     error = 1;
-                    return; 
-                    
-                elseif((theta7_a > obj.kuka_joint_lim_max(7)) || (theta7_a < obj.kuka_joint_lim_min(7)) || (theta7_b > obj.kuka_joint_lim_max(7)) || (theta7_b < obj.kuka_joint_lim_min(7)))
-                    disp(['---' newline 'Error in theta7!' newline 'Value is outside joint limits!' newline 'Exiting simulation...' newline '---']);
+                    return;  
+                else
+                    if(err_theta5a == 0)
+                        if(err_theta5b ~= 0)
+                          theta5_b = theta5_a;
+                          theta7_b = theta7_a;
+                        end
+                    else
+                        if(err_theta5b == 0)
+                            theta5_a = theta5_b;
+                            theta7_a = theta7_b;
+                        end
+                    end
+                end
+
+                err_theta7a = obj.checkThetaLimit(7, theta7_a);
+                err_theta7b = obj.checkThetaLimit(7, theta7_b);
+
+                if(err_theta7a ~= 0 && err_theta7b ~=0)
+                    disp(['---' newline 'Error in theta7!' newline 'Value is outside joint limits: ' newline sprintf('Theta7 A: %f, Theta7 B: %f', theta7_a, theta7_b) newline 'Exiting simulation...' newline '---']);
                     error = 1;
-                    return; 
+                    return;  
+                else
+                    if(err_theta7a == 0)
+                        if(err_theta7b ~= 0)
+                        theta7_b = theta7_a;
+                        theta5_b = theta5_a;
+                        end
+                    else
+                        if(err_theta7b == 0)
+                            theta7_a = theta7_b;
+                            theta5_a = theta5_b;
+                        end
+                    end
                 end
             end
 
@@ -325,6 +393,16 @@ classdef kinematics < handle
                         optimalSolution = solution;
                     end
                 end
+            end
+        end
+
+        %*******************Check theta Limits  ***********************
+        function [error_type] = checkThetaLimit(obj, angle_num, angle_val)
+            error_type = 0;
+            if(angle_val > obj.kuka_joint_lim_max(angle_num))
+                error_type = 2;
+            elseif(angle_val < obj.kuka_joint_lim_min(angle_num))
+                error_type = 1;
             end
         end
     end
