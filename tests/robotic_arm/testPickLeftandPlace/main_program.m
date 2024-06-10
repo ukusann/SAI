@@ -81,7 +81,9 @@ if error == 1
     sim.terminate();
     return;
 end
+
 app = GUI;
+
 error = robot_arm.open_hand(); %Initialize with hand opened
 if error == 1
     sim.terminate();
@@ -116,7 +118,7 @@ if(error==1)
 end
 
 % Set wheels speeds
-[error, ~, ~, phi] = vehicle.set_velocity(vel_front_left,vel_front_right,vel_rear_left,vel_rear_right);
+[error, xrobot, yrobot, phirobot] = vehicle.set_velocity(vel_front_left,vel_front_right,vel_rear_left,vel_rear_right);
 %Input:
 % vel_front_left - rad/s
 % vel_front_right - rad/s
@@ -211,7 +213,7 @@ dh_theta = pi/180*[0, 0, 0, 0, 0, 0, 0]';
 %* Kinematics class object creation
 kuka_kinematics = kinematics(kuka_joint_lim_min, kuka_joint_lim_max, Links);
 alpha = 0*pi/180;
-alpha2 = 45*pi/180;
+alpha2 = 65*pi/180;
 
 lastSolution = theta';
 finalSolution = zeros(7,1);
@@ -228,24 +230,23 @@ retShelfRight = 0;
 parkPositionReached = 0;
 isParked = 0;
 isPicked = 0;
+isPlaced = 0;
 atTransPos = 0;
 atEndEffector = 0;
 endEffector2ndCall = 0;
 exitPark = 0;
 move_omni = 0;
-placed = 0;
 defPositionReached = 0;
 %***** Temp Flags *****
 box_high = 1;
-box_low = 1;
+box_low = 0;
 tmpDelay = 0;
 waitForBox = 0;
 start_traj = 0;
 closeGripper = 0;
 waitToMove = 1;
 exitShelf = 0;
-
-%***** GUI *****
+%***** GUI*****
 state_counter = 0;
 theta1 = 0;
 theta2 = 0;
@@ -263,12 +264,14 @@ ze = 0;
 
 %*==================================================
 
+
+
 %*---------------------- Initial Commands -------------------
 stateMachine = statesHandler(rob_L, rob_W, lambdaTarget, lambda_v, max_d_limit, min_d_limit, stop_time, euler_pass, obsSensorNumber, B1, B2, Q, changeTargetDist, phi_parking, DistanceHand);
-currentState = states.MoveArmEndEffector;
+currentState = states.GoToTarget;
 % currentState = states.MoveArmTransp;
 nextState = currentState;
-sim.move_conveyorbelt(1);
+% sim.move_conveyorbelt(2);
 robot_arm.set_joints_defPos();
 %*==================================================
 %%%---------------------- Start Robot Motion Behavior -------------------
@@ -308,6 +311,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     %*===============================================
     %*----------- BEGIN YOUR CODE HERE ----------- %
     %% Begin Code
+    %%? ----------------GUI thetas----------------
     hand = directKinematics(kuka_kinematics, dh_alpha, dh_a, dh_d, dh_theta, theta);
     xe = hand(1);
     ye = hand(2);
@@ -316,16 +320,6 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     pitch = rad2deg(hand(5));
     roll = rad2deg(hand(6));
     app.pose_tip(xe, ye, ze, yaw, pitch, roll);
-    
-    theta1= rad2deg(theta(1));
-    theta2 = rad2deg(theta(2));
-    theta3= rad2deg(theta(3));
-    theta4 = rad2deg(theta(4));
-    theta5= rad2deg(theta(5));
-    theta6 = rad2deg(theta(6));
-    theta7= rad2deg(theta(7));
-    app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
-
 
     %%? ----------------State Idle----------------
     if(currentState == states.Idle)
@@ -351,21 +345,6 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     %%? ------------State GoToTarget--------------
     if(currentState == states.GoToTarget)
-        % Convert longitudinal speed, lateral speed and angular speed into wheel
-        % speed
-        [error,vel_front_left,vel_front_right,vel_rear_left,vel_rear_right] = vehicle.Kinematics_vehicle(wrobot, vrobot_y,vrobot_x);
-        if(error==1)
-            break;
-        end
-
-        % set robot linear velocity and angular displacement for steering
-        % get also pose. it can be used vehicle.get_vehicle_pose() instead
-        [error,xrobot, yrobot, phirobot] = vehicle.set_velocity(vel_front_left,vel_front_right,vel_rear_left,vel_rear_right);
-        if(error==1)
-            break;
-        end
-
-        %[x, y, phi_2pi] = vehicle.get_vehicle_pose2pi();
 
         % trigger obstacles data reception
         error = vehicle.trigger_obstacles();
@@ -382,11 +361,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
        [vrobot_y, vrobot_x, wrobot, parkPositionReached] = stateMachine.handlerGoToTarget(YTARGET, XTARGET, yrobot, xrobot, vrobot_x, ...
                                                                                             phirobot, lambda_obs, psi_obs, sigma, fobs, theta_obs, dist);
-    end
-    %%? ------------------------------------------
 
-    %%? ---------- State Init Parking ------------
-    if(currentState == states.InitParking)
         % Convert longitudinal speed, lateral speed and angular speed into wheel
         % speed
         [error,vel_front_left,vel_front_right,vel_rear_left,vel_rear_right] = vehicle.Kinematics_vehicle(wrobot, vrobot_y,vrobot_x);
@@ -400,8 +375,11 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         if(error==1)
             break;
         end
+    end
+    %%? ------------------------------------------
 
-        %[x, y, phi_2pi] = vehicle.get_vehicle_pose2pi();
+    %%? ---------- State Init Parking ------------
+    if(currentState == states.InitParking)
 
         % trigger obstacles data reception
         error = vehicle.trigger_obstacles();
@@ -418,20 +396,26 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
         [vrobot_y, vrobot_x, wrobot, isParked, phi_parking(itarget)] = stateMachine.handlerInitParking(YTARGET, XTARGET, yrobot, xrobot, vrobot_min, ...
                                                                                                         phirobot, phi_parking(itarget), itarget, fobs);
+
+        % Convert longitudinal speed, lateral speed and angular speed into wheel
+        % speed
+        [error,vel_front_left,vel_front_right,vel_rear_left,vel_rear_right] = vehicle.Kinematics_vehicle(wrobot, vrobot_y,vrobot_x);
+        if(error==1)
+            break;
+        end
+
+        % set robot linear velocity and angular displacement for steering
+        % get also pose. it can be used vehicle.get_vehicle_pose() instead
+        [error,xrobot, yrobot, phirobot] = vehicle.set_velocity(vel_front_left,vel_front_right,vel_rear_left,vel_rear_right);
+        if(error==1)
+            break;
+        end
+
     end
     %%? ------------------------------------------
 
     %%? -------------- State MoveArmEndEffector -------------
     if(currentState == states.MoveArmEndEffector)
-        [error, robotPoseInWorldRef] = robot_arm.get_robot_pose();
-        if(error==1)
-            break;
-        end
-        % theta - get joint value (rad) for arm
-        [error,theta] = robot_arm.get_joints();
-        if error == 1
-            break;
-        end
         if(waitToMove == 1)
             delay_grip = delay_grip + toc(start);
             if(delay_grip > 5)
@@ -439,22 +423,31 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                 delay_grip = 0;
             end
         else
-            if(isPicked == 0)
-                [delay_movArm, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerMoveArmEndEffector(lastSolution, finalSolution, start_traj, ...
-                                                                                                                        delay_movArm, start, boxesPose(1, :), robotPoseInWorldRef);
-            else
-                if(itarget == 4)
-                    [error, convOutPose] = sim.get_conveyorOutPose();
-                    if(error==1)
-                        break;
-                    end
-                    targetPose = convOutPose;
-                    targetPose(1) = targetPose(1)+1;
-                    targetPose(6) = targetPose(6)+3*pi/2;
-                    targetPose
-                    [delay_movArm, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerMoveArmEndEffector(lastSolution, finalSolution, start_traj, ...
-                                                                                                                        delay_movArm, start, targetPose, robotPoseInWorldRef);
+            [error, robotPoseInWorldRef] = robot_arm.get_robot_pose();
+            if(error==1)
+                break;
+            end
+            % theta - get joint value (rad) for arm
+            [error,theta] = robot_arm.get_joints();
+            if error == 1
+                break;
+            end
+            
+            if(itarget == 4)
+                [error, convOutPose] = sim.get_conveyorOutPose();
+                if(error==1)
+                    break;
                 end
+                targetPose = convOutPose;
+                targetPose(1) = targetPose(1)+1;
+                targetPose(2) = targetPose(2)+0.1;
+                targetPose(3) = targetPose(3)+0.05;
+                targetPose(6) = targetPose(6)+3*pi/2;
+                [delay_movArm, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerMoveArmEndEffector(lastSolution, finalSolution, start_traj, ...
+                                                                                                                            delay_movArm, start, targetPose, robotPoseInWorldRef, itarget);
+            else
+                [delay_movArm, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerMoveArmEndEffector(lastSolution, finalSolution, start_traj, ...
+                                                                                                                    delay_movArm, start, boxesPose(1, :), robotPoseInWorldRef, itarget);
             end
                 
             if(setJoints == 1)
@@ -465,7 +458,11 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                 end
             elseif(calcInvKin == 1)
                 calcInvKin = 0;
-                [error, solPossible, jointAnglesSol1, jointAnglesSol2, jointAnglesSol3, jointAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand);
+                alphades = alpha;
+                if(itarget == 4)
+                    alphades = alpha2;
+                end
+                [error, solPossible, jointAnglesSol1, jointAnglesSol2, jointAnglesSol3, jointAnglesSol4] = kuka_kinematics.inverseKinematics(alphades, poseHand);
                 if(error == 1)
                     break;
                 end
@@ -578,11 +575,12 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                 end
                 targetPose = convOutPose;
                 targetPose(1) = targetPose(1)+1;
+                targetPose(2) = targetPose(2)+0.1;
+                targetPose(3) = targetPose(3)+0.05;
                 targetPose(6) = targetPose(6)+3*pi/2;
-                targetPose
             end
-            [delay_grip, setJoints, calcInvKin, joints, poseHand, openGripper] = stateMachine.handlerPickBox(lastSolution, finalSolution, start_traj, ...
-                                                                                                                delay_grip, start, targetPose, robotPoseInWorldRef, box_high);
+            [delay_grip, setJoints, calcInvKin, joints, poseHand, openGripper] = stateMachine.handlerPlaceBox(lastSolution, finalSolution, start_traj, ...
+                                                                                                                delay_grip, start, targetPose, robotPoseInWorldRef, box_high, itarget);
             if(setJoints == 1)
                 setJoints = 0;
                 error = robot_arm.set_joints(joints);
@@ -591,7 +589,11 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                 end
             elseif(calcInvKin == 1)
                 calcInvKin = 0;
-                [error, solPossible, jointAnglesSol1, jointAnglesSol2, jointAnglesSol3, jointAnglesSol4] = kuka_kinematics.inverseKinematics(alpha, poseHand);
+                alphades = alpha;
+                if(itarget == 4)
+                    alphades = alpha2;
+                end
+                [error, solPossible, jointAnglesSol1, jointAnglesSol2, jointAnglesSol3, jointAnglesSol4] = kuka_kinematics.inverseKinematics(alphades, poseHand);
                 if(error == 1)
                     break;
                 end
@@ -734,6 +736,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                 lastSolution = finalSolution;
                 delay_movArm = 0;
                 start_traj = 0;
+                step = 0;
                 atTransPos = 1; %todo: Change State
             end   
         end
@@ -742,21 +745,6 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
 
     %%? ---------- State Exit Parking ------------
     if(currentState == states.ExitParking)
-        % Convert longitudinal speed, lateral speed and angular speed into wheel
-        % speed
-        [error,vel_front_left,vel_front_right,vel_rear_left,vel_rear_right] = vehicle.Kinematics_vehicle(wrobot, vrobot_y,vrobot_x);
-        if(error==1)
-            break;
-        end
-
-        % set robot linear velocity and angular displacement for steering
-        % get also pose. it can be used vehicle.get_vehicle_pose() instead
-        [error,xrobot, yrobot, phirobot] = vehicle.set_velocity(vel_front_left,vel_front_right,vel_rear_left,vel_rear_right);
-        if(error==1)
-            break;
-        end
-
-        %[x, y, phi_2pi] = vehicle.get_vehicle_pose2pi();
 
         % trigger obstacles data reception
         error = vehicle.trigger_obstacles();
@@ -782,12 +770,6 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                                                                                                                                     vrobot_min, phirobot, phi_parking(itarget), ...
                                                                                                                                     box_low, box_high, isPicked, itarget, ...
                                                                                                                                     delay_exitPark, start);
-        end   
-     end
-    %%? ------------------------------------------
-
-    %%? ----------- State GoToDefPos -------------
-    if(currentState == states.GoToDefPos)
         % Convert longitudinal speed, lateral speed and angular speed into wheel
         % speed
         [error,vel_front_left,vel_front_right,vel_rear_left,vel_rear_right] = vehicle.Kinematics_vehicle(wrobot, vrobot_y,vrobot_x);
@@ -801,8 +783,13 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         if(error==1)
             break;
         end
+                                                                                                                            
+        end   
+     end
+    %%? ------------------------------------------
 
-        %[x, y, phi_2pi] = vehicle.get_vehicle_pose2pi();
+    %%? ----------- State GoToDefPos -------------
+    if(currentState == states.GoToDefPos)
 
         % trigger obstacles data reception
         error = vehicle.trigger_obstacles();
@@ -820,11 +807,35 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         [vrobot_y, vrobot_x, wrobot, startRotate, delay_rotate, defPositionReached] = stateMachine.handlerGoToDefPos(YTARGET, XTARGET, yrobot, xrobot, ...
                                                                                                                     startRotate, phirobot, phi_parking(itarget), ...
                                                                                                                     delay_rotate, start);
+        % Convert longitudinal speed, lateral speed and angular speed into wheel
+        % speed
+        [error,vel_front_left,vel_front_right,vel_rear_left,vel_rear_right] = vehicle.Kinematics_vehicle(wrobot, vrobot_y,vrobot_x);
+        if(error==1)
+            break;
+        end
+
+        % set robot linear velocity and angular displacement for steering
+        % get also pose. it can be used vehicle.get_vehicle_pose() instead
+        [error,xrobot, yrobot, phirobot] = vehicle.set_velocity(vel_front_left,vel_front_right,vel_rear_left,vel_rear_right);
+        if(error==1)
+            break;
+        end
+
     end
     %%? ------------------------------------------
 
     %%? ------------ Update State ----------------
     if(currentState == states.Idle)
+        state_counter = 1;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
+
         if(boxAvailable == 1)
             boxAvailable = 0;
             nextState = states.GoToTarget;
@@ -844,7 +855,16 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
 
     elseif(currentState == states.GoToTarget)
-        sim.move_conveyorbelt(1);
+        state_counter = 2;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
+        % sim.move_conveyorbelt(1);
         if(parkPositionReached == 1)
             parkPositionReached = 0; % Reset aux flag
             if(itarget == 5)
@@ -857,12 +877,30 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
 
     elseif(currentState == states.GoToDefPos)
+        state_counter = 9;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(defPositionReached)
             defPositionReached = 0;
             nextState = states.ExitParking;
         end
 
     elseif(currentState == states.InitParking)
+        state_counter = 3;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(isParked == 1)
             isParked = 0; % Reset aux flag
             if(itarget == 1 || itarget == 5)
@@ -875,6 +913,15 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
 
     elseif(currentState == states.MoveArmEndEffector)
+        state_counter = 6;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(atEndEffector == 1)
             atEndEffector = 0;
             if(endEffector2ndCall == 1)
@@ -892,6 +939,15 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
          end
 
     elseif(currentState == states.PickBox)
+        state_counter = 4;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(isPicked == 1)
             nextState = states.MoveArmEndEffector;
         else
@@ -899,13 +955,31 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
     
     elseif(currentState == states.PlaceBox)
-        if(placed == 1)
-            nextState = states.MoveArmTransp;
+        state_counter = 5;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
+        if(isPlaced == 1)
+            nextState = states.MoveArmEndEffector;
         else
             nextState = states.PlaceBox;
         end
 
     elseif(currentState == states.MoveArmTransp)
+        state_counter = 6;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(atTransPos == 1)
             atTransPos = 0;
             nextState = states.ExitParking;
@@ -914,6 +988,15 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
         end
 
     elseif(currentState == states.ExitParking)
+        state_counter = 8;
+        theta1= rad2deg(theta(1));
+        theta2 = rad2deg(theta(2));
+        theta3= rad2deg(theta(3));
+        theta4 = rad2deg(theta(4));
+        theta5= rad2deg(theta(5));
+        theta6 = rad2deg(theta(6));
+        theta7= rad2deg(theta(7));
+        app.thetas(theta1, theta2, theta3, theta4, theta4, theta6, theta7);
         if(exitPark == 1)
             exitPark = 0;
             if(waitForBox == 1)
@@ -931,6 +1014,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
     end
 
     currentState = nextState;
+      states(app, state_counter);
     %%? ------------------------------------------
     %*===============================================
     %*===============================================
