@@ -419,7 +419,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                         delay_movArm, start, targetPose, robotPoseInWorldRef, box_high,itarget);
                 elseif(itarget == 7)    
                     % targetPose = [0, 3.275, 0.650, 0, 0, 180] % Pose ShelfLeft
-                    targetPose = [0, 2.86, 0.650, 0, 0, 90]; % Pose ShelfLeft
+                    targetPose = [0, 2.88, 0.650, 0, 0, 90]; % Pose ShelfLeft
                     [delay_movArm, setJoints, calcInvKin, joints, poseHand, stopTraj] = stateMachine.handlerMoveArmEndEffector(lastSolution, finalSolution, start_traj, ...
                                                                                                                     delay_movArm, start, targetPose, robotPoseInWorldRef, box_high,itarget);         
                 else
@@ -563,7 +563,7 @@ while itarget<=sim.TARGET_Number % until robot goes to last target (TARGET_Numbe
                 targetPose = [0.1, -2.675, 0.650, 0, 0, 90]; % Pose ShelfLeft
             elseif(itarget == 7)
                 % targetPose = [0, 3.275, 0.650, 0, 0, 180] % Pose ShelfLeft
-                targetPose = [0, 3.0, 0.650, 0, 0, 90]; % Pose ShelfLeft
+                targetPose = [0, 3.1, 0.650, 0, 0, 90]; % Pose ShelfLeft
             end
             [delay_grip, setJoints, calcInvKin, joints, poseHand, openGripper] = stateMachine.handlerPlaceBox(lastSolution, finalSolution, start_traj, ...
                                                                                                                 delay_grip, start, targetPose, robotPoseInWorldRef, itarget);

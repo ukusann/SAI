@@ -162,7 +162,7 @@ classdef statesHandler < handle
                 elseif(itarget == 7)
                     rot07 = [rotObj(1:3, 1), -rotObj(1:3, 2), -rotObj(1:3, 3)];
                     [des_yaw_x, des_pitch_y, des_roll_z] = kinematics.computeMatrixToRPY(rot07);
-                    desPoseHand = [poseObjInBaseRef(1), poseObjInBaseRef(2)-0.2, poseObjInBaseRef(3)+obj.distanceHand+0.25, des_yaw_x, des_pitch_y, des_roll_z]';
+                    desPoseHand = [poseObjInBaseRef(1), poseObjInBaseRef(2)-0.2, poseObjInBaseRef(3)+obj.distanceHand+0.20, des_yaw_x, des_pitch_y, des_roll_z]';
                 else
                     rot07 = [rotObj(1:3, 1), -rotObj(1:3, 2), -rotObj(1:3, 3)];
                     [des_yaw_x, des_pitch_y, des_roll_z] = kinematics.computeMatrixToRPY(rot07);
@@ -252,7 +252,7 @@ classdef statesHandler < handle
                 elseif(itarget == 7)
                     rot07 = [rotObj(1:3, 1), -rotObj(1:3, 2), -rotObj(1:3, 3)];
                     [des_yaw_x, des_pitch_y, des_roll_z] = kinematics.computeMatrixToRPY(rot07);
-                    desPoseHand = [poseObjInBaseRef(1)+0.05, poseObjInBaseRef(2), poseObjInBaseRef(3)+obj.distanceHand+0.15, des_yaw_x, des_pitch_y+10*pi/180, des_roll_z]';
+                    desPoseHand = [poseObjInBaseRef(1)+0.05, poseObjInBaseRef(2), poseObjInBaseRef(3)+obj.distanceHand+0.15, des_yaw_x, des_pitch_y-20*pi/180, des_roll_z]';
                 else
                     rot07 = [rotObj(1:3, 1), -rotObj(1:3, 2), -rotObj(1:3, 3)];
                     [des_yaw_x, des_pitch_y, des_roll_z] = kinematics.computeMatrixToRPY(rot07);
