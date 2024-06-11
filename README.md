@@ -4,7 +4,7 @@ Project for the SAI UC
 
 ## Description
 
-This project uses matlab alongside with coppelia to make an industrial autonomous systems. In this project, it is used the robot [NAME] for the [CHOSED_PROJECT] scenario.
+This project uses matlab alongside with coppelia to make an industrial autonomous systems. In this project, it is used the robot Kuka LBR iiwa 14 R820 and mobile platform for the boxes scenario.
 
 ## Contributing
 
